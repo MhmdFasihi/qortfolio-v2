@@ -1,0 +1,46 @@
+# Copyright (c) 2025 Seyed Mohammad Hossein Fasihi (Mhmd Fasihi)
+# This file is part of a project licensed under AGPLv3 or a commercial license.
+# AGPLv3: https://www.gnu.org/licenses/agpl-3.0.html
+# Contact for commercial licensing: mhmd.fasihi@gmail.com
+
+crypto_mappings:
+  bitcoin:
+    name: "Bitcoin"
+    symbol: "BTC"
+    yfinance_ticker: "BTC-USD"
+    deribit_currency: "BTC"
+    enabled: true
+    priority: 1
+    
+  ethereum:
+    name: "Ethereum"
+    symbol: "ETH"
+    yfinance_ticker: "ETH-USD"
+    deribit_currency: "ETH"
+    enabled: true
+    priority: 2
+    
+  solana:
+    name: "Solana"
+    symbol: "SOL"
+    yfinance_ticker: "SOL-USD"
+    deribit_currency: "SOL"
+    enabled: true
+    priority: 9
+
+data_collection:
+  default_timeframes:
+    - "1d"
+    - "1h"
+    - "15m"
+    
+  historical_periods:
+    short: "30d"
+    medium: "90d"
+    long: "1y"
+
+options_config:
+  supported_currencies: ["BTC", "ETH", "SOL"]
+  default_params:
+    risk_free_rate: 0.05
+    min_time_to_maturity: 0.00274

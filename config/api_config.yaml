@@ -1,0 +1,53 @@
+# Copyright (c) 2025 Seyed Mohammad Hossein Fasihi (Mhmd Fasihi)
+# This file is part of a project licensed under AGPLv3 or a commercial license.
+# AGPLv3: https://www.gnu.org/licenses/agpl-3.0.html
+# Contact for commercial licensing: mhmd.fasihi@gmail.com
+
+deribit_api:
+  base_url: "https://www.deribit.com/api/v2"
+  public_endpoints:
+    instruments: "/public/get_instruments"
+    ticker: "/public/ticker"
+    orderbook: "/public/get_order_book"
+    
+  rate_limits:
+    requests_per_second: 20
+    requests_per_minute: 1000
+    
+  retry_config:
+    max_retries: 3
+    backoff_factor: 1.0
+    timeout: 30
+    
+  defaults:
+    currency: "BTC"
+    kind: "option"
+    expired: false
+
+yfinance_api:
+  rate_limits:
+    requests_per_second: 5
+    requests_per_minute: 100
+    
+  retry_config:
+    max_retries: 3
+    backoff_factor: 2.0
+    timeout: 15
+    
+  defaults:
+    period: "1y"
+    interval: "1d"
+    auto_adjust: true
+
+caching:
+  enabled: true
+  ttl:
+    spot_prices: 60
+    options_data: 300
+    historical_data: 3600
+    
+error_handling:
+  max_consecutive_failures: 5
+  failure_cooldown_seconds: 60
+  log_errors: true
+  log_level: "WARNING"
