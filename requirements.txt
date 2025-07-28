@@ -1,0 +1,44 @@
+# Core Data Science Libraries
+pandas>=2.0.0
+numpy>=1.24.0
+scipy>=1.10.0
+matplotlib>=3.6.0
+seaborn>=0.12.0
+plotly>=5.14.0
+
+# Financial Libraries
+yfinance>=0.2.0
+quantlib>=1.29
+riskfolio-lib>=4.3.0
+
+# Machine Learning
+scikit-learn>=1.3.0
+keras>=2.13.0
+
+# Dashboard
+streamlit>=1.25.0
+streamlit-plotly-events>=0.0.6
+
+# API & Web
+requests>=2.31.0
+aiohttp>=3.8.0
+websockets>=11.0
+
+# Configuration & Utilities
+pyyaml>=6.0
+python-dotenv>=1.0.0
+tqdm>=4.65.0
+click>=8.1.0
+
+# Testing & Quality
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-asyncio>=0.21.0
+black>=23.0.0
+mypy>=1.4.0
+flake8>=6.0.0
+
+# Development
+jupyter>=1.0.0
+ipykernel>=6.24.0
+notebook>=6.5.0

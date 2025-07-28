@@ -1,0 +1,43 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Qortfolio V2 Cursor Rules
+
+## Project Structure & Methodology
+- Follow the project structure as outlined in the development roadmap. Place new modules in their appropriate directories (e.g., `src/core/`, `src/data/`, `src/analytics/`, `src/dashboard/`).
+- Use Agile development with weekly sprints and clear handoff documentation between phases and contributors.
+- All code must be tested with >90% coverage, especially for core utilities and critical calculations.
+
+## Critical Bugs & Fixes
+- **Time-to-maturity calculation must use the correct formula:**
+  - `time_diff.total_seconds() / (365.25 * 24 * 3600)`
+  - Do NOT use the legacy formula: `time_diff.total_seconds() / 31536000 * 365`
+- Track and prioritize legacy bugs (e.g., RNN/LSTM/GRU shape mismatches, model loading failures, dashboard crashes) as per the status tracker.
+- Document all bug fixes in handoff notes, including test results and configuration decisions.
+
+## Feature Implementation
+- **Options Analytics Module (Phase 1 Priority):**
+  - Real-time options data collection from Deribit (BTC/ETH).
+  - Black-Scholes pricing engine with Greeks (Delta, Gamma, Theta, Vega, Rho).
+  - Gamma exposure calculations at both portfolio and position levels.
+  - Options chain analysis and real-time updates.
+- **Volatility Analysis Module:**
+  - yfinance integration for top cryptocurrencies.
+  - Statistical and ML-based volatility analysis (MLP, RNN, LSTM, GRU).
+  - Volatility surfaces and statistical dashboards.
+- **Dashboard Module:**
+  - Streamlit-based UI.
+  - Dedicated pages for options analytics, volatility surfaces, and statistical analysis.
+  - Real-time data updates and visualizations.
+
+## Data Handling & Validation
+- Comprehensive error handling is required for all data collectors and integrations.
+- Data validation must be performed after collection, with invalid entries removed and results logged.
+- Configuration management should use YAML files for crypto mappings and API settings, with environment variable support.
+
+## Documentation & Handoff
+- Document all major decisions (e.g., configuration, bug fixes, feature implementations) in the appropriate markdown files.
+- Update the status tracker as tasks are completed or bugs are fixed.
+- Acceptance criteria for each phase/task must be clearly checked off before moving to the next.

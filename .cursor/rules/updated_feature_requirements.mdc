@@ -1,0 +1,568 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# 📋 Qortfolio V2 - Updated Feature Requirements & Roadmap
+
+## 🎯 Project Overview
+**Platform:** Professional quantitative finance platform combining options analytics with volatility modeling and portfolio management  
+**Primary UI:** Streamlit Dashboard (Phase 1)  
+**Target Assets:** BTC/ETH (Options) + Top 10+ Cryptocurrencies (Volatility)  
+**Data Source:** yfinance + Deribit API  
+
+---
+
+## 📊 PHASE 1: CORE FEATURES (Must-Have)
+
+### 🔹 **1. OPTIONS ANALYTICS MODULE**
+**Scope:** BTC and ETH options only  
+**Data Source:** Deribit API
+
+#### 1.1 Options Data Management
+- [ ] **Real-time Options Data Collection** (Deribit API)
+  - BTC options data collection with error handling
+  - ETH options data collection with error handling
+  - **FIXED: Time-to-maturity calculation** (resolve mathematical bug)
+  - Options data validation and cleaning
+  - Automatic data refresh mechanism
+
+- [ ] **Options Pricing Engine**
+  - **Black-Scholes Model** (mathematically corrected)
+  - **Greeks Calculations:** Delta, Gamma, Theta, Vega, Rho
+  - **Gamma Exposure Calculation** ⭐ **NEW**
+    - Portfolio-level gamma exposure
+    - Individual position gamma risk
+    - Gamma exposure by expiration
+    - Real-time gamma monitoring
+  - **Implied Volatility** extraction and validation
+  - Multiple expiration dates support
+  - Strike price range management
+
+#### 1.2 Advanced Options Analytics ⭐ **ENHANCED**
+- [ ] **Volatility Surfaces**
+  - 3D implied volatility surface visualization
+  - Volatility smile/skew analysis
+  - Term structure of volatility
+  - Historical volatility surface evolution
+  - Surface arbitrage detection
+
+- [ ] **Statistical Analysis on Options**
+  - **Historical Call/Put Ratio Analysis**
+    - Daily call/put volume ratios
+    - Open interest call/put ratios
+    - Sentiment indicators from ratios
+    - Historical ratio patterns
+  - Options flow analysis
+  - Unusual activity detection
+  - Volume-weighted average prices
+  - Bid-ask spread analysis
+
+- [ ] **Implied vs Real Volatility Analysis** ⭐ **PHASE 1 PRIORITY**
+  - **Real-time IV vs RV Charts**
+    - Current implied volatility levels
+    - Realized volatility calculations
+    - IV-RV spread analysis
+    - Volatility premium/discount identification
+  - **Forward Volatility Analysis**
+    - Forward-looking volatility estimates
+    - Term structure forecasting
+    - Volatility calendar effects
+    - Event-driven volatility analysis
+
+#### 1.3 Options Chain Analysis
+- [ ] **Real-time Options Chain**
+  - Complete BTC options chain display
+  - Complete ETH options chain display
+  - Multiple expiration dates
+  - Strike price ranges with Greeks
+  - Volume and open interest data
+  - Bid/ask spreads analysis
+
+- [ ] **Chain Analytics**
+  - Implied volatility smile/skew
+  - Put/call ratio analysis
+  - Option flow analysis
+  - Unusual activity detection
+  - Support/resistance levels
+
+#### 1.4 Strategy Testing & Analysis
+- [ ] **Options Strategy Tester**
+  - Multi-leg strategy construction
+  - Historical strategy backtesting
+  - Strategy performance metrics
+  - Risk-adjusted returns analysis
+  - Strategy comparison tools
+
+- [ ] **Strategy Performance Analytics**
+  - Profit/Loss analysis
+  - Maximum drawdown tracking
+  - Win rate and average returns
+  - Sharpe ratio for strategies
+  - Rolling performance analysis
+
+- [ ] **Strategy Risk Management**
+  - Strategy-level Greeks monitoring
+  - Position sizing optimization
+  - Risk limits and alerts
+  - Scenario stress testing
+  - Monte Carlo simulations
+
+#### 1.5 PnL Analysis & Estimation
+- [ ] **Advanced PnL Estimator**
+  - Real-time P&L calculation
+  - Greeks-based P&L attribution
+  - Scenario-based P&L analysis
+  - **Taylor expansion PnL (Low Priority Feature)**
+    - Basic Taylor series expansion: `ΔC ≈ δΔS + ½γ(ΔS)² + θΔt + νΔσ`
+    - Simple parameter sensitivity
+    - Limited scenario testing
+  - Mark-to-market valuations
+
+- [ ] **Portfolio P&L Management**
+  - Multi-position P&L aggregation
+  - Real-time portfolio valuation
+  - Position-level P&L tracking
+  - Historical P&L analysis
+
+---
+
+### 🔹 **2. VOLATILITY ANALYSIS MODULE**
+**Scope:** Top 10+ cryptocurrencies (expandable)  
+**Data Source:** yfinance with ticker mapping
+
+#### 2.1 Data Management & Configuration
+- [ ] **Cryptocurrency Configuration**
+  - **Coin name mapping system** (crypto names → yfinance tickers)
+  - Top 10 cryptocurrencies initially: BTC-USD, ETH-USD, XRP-USD, LTC-USD, BCH-USD, BNB-USD, ADA-USD, DOGE-USD, SOL-USD, AVAX-USD
+  - Expandable configuration for additional coins
+  - Automatic ticker validation
+
+- [ ] **Historical Data Collection**
+  - yfinance integration with error handling
+  - Multi-timeframe data support (1D, 1H, etc.)
+  - Data validation and cleaning
+  - Missing data handling
+
+#### 2.2 Volatility Forecasting (FIXED from crypto_volatility)
+- [ ] **Machine Learning Models** (All Working)
+  - **MLP (Multilayer Perceptron)** - Fixed implementation
+  - **RNN (Recurrent Neural Network)** - **FIXED: Shape mismatch resolved**
+  - **LSTM (Long Short-Term Memory)** - **FIXED: Sequence handling**
+  - **GRU (Gated Recurrent Unit)** - **FIXED: Input processing**
+
+- [ ] **Model Training & Validation**
+  - Time series cross-validation
+  - Multi-step ahead forecasting
+  - Model performance metrics (MAE, MSE, RMSE, R², MAPE)
+  - Model persistence and loading
+
+#### 2.3 Advanced Volatility Analytics
+- [ ] **Statistical Analysis on Volatility** ⭐ **NEW**
+  - **Volatility Descriptive Statistics**
+    - Mean, median, standard deviation
+    - Skewness and kurtosis analysis
+    - Percentile distributions
+    - Volatility clustering metrics
+  - **Volatility Patterns**
+    - Intraday volatility patterns
+    - Day-of-week effects
+    - Monthly seasonality
+    - Holiday effects
+  - **Volatility Correlations**
+    - Cross-asset volatility correlations
+    - Lead-lag relationships
+    - Volatility spillover effects
+
+- [ ] **Volatility Clustering**
+  - Dynamic Time Warping (DTW) similarity
+  - Hierarchical clustering
+  - K-means clustering
+  - Cluster analysis and visualization
+
+- [ ] **Regime Detection**
+  - Hidden Markov Models (HMM)
+  - Volatility regime classification (Low/Medium/High)
+  - State transition analysis
+  - Current regime identification
+
+- [ ] **Anomaly Detection**
+  - Z-Score based detection
+  - Isolation Forest algorithm
+  - Random Forest classifier
+  - Ensemble anomaly detection
+  - Anomaly statistics and alerts
+
+---
+
+### 🔹 **3. PORTFOLIO MANAGEMENT MODULE**
+**Scope:** Combined options and spot cryptocurrency positions
+
+#### 3.1 Unified Portfolio System
+- [ ] **Multi-Asset Portfolio Support**
+  - Options positions management
+  - Spot cryptocurrency positions
+  - Combined portfolio view
+  - Position tracking and updates
+
+- [ ] **Real-time Valuation**
+  - **Automatic price updates** (fix current static pricing issue)
+  - **Dynamic strike price suggestions**
+  - Real-time P&L calculation
+  - Portfolio composition analysis
+
+#### 3.2 Asset Allocation Engine
+- [ ] **Riskfolio-lib Integration**
+  - Modern Portfolio Theory implementation
+  - Risk parity methods
+  - Black-Litterman model
+  - Factor models integration
+
+- [ ] **Custom Allocation Models** (Extensible Architecture)
+  - **HRP (Hierarchical Risk Parity)** - Your existing model
+  - **HERC (Hierarchical Equal Risk Contribution)** - Your existing model
+  - **Additional Models Framework:**
+    - Mean Variance Optimization
+    - Risk Budgeting
+    - Maximum Diversification
+    - Minimum Variance
+    - Equal Weight
+    - **Extensible for future models**
+
+#### 3.3 Risk Management ⭐ **ENHANCED**
+- [ ] **Portfolio Risk Metrics**
+  - Value at Risk (VaR)
+  - **Conditional Value at Risk (CVaR)** ⭐ **NEW**
+    - Expected shortfall calculations
+    - CVaR optimization
+    - Tail risk analysis
+    - CVaR-based position sizing
+  - Maximum Drawdown
+  - Sharpe Ratio
+  - Sortino Ratio
+  - Calmar Ratio
+
+- [ ] **Risk Monitoring**
+  - Real-time risk alerts
+  - Position size limits
+  - Correlation analysis
+  - Stress testing
+  - Scenario analysis
+
+---
+
+### 🔹 **4. DASHBOARD & USER INTERFACE**
+**Technology:** Streamlit (Phase 1)
+
+#### 4.1 Main Dashboard Structure
+- [ ] **Navigation System**
+  - Multi-tab interface
+  - Sidebar navigation
+  - Session state management
+  - User preferences storage
+
+- [ ] **Dashboard Pages:**
+  - **📊 Options Analytics** (BTC/ETH focus)
+  - **🌋 Volatility Surfaces** (3D IV surface visualization) ⭐ **NEW**
+  - **⛓️ Options Chain** (Real-time BTC/ETH chains)
+  - **🧪 Strategy Tester** (Portfolio strategy testing)
+  - **📈 Volatility Analysis** (Multi-crypto with statistical analysis) ⭐ **ENHANCED**
+  - **📊 Statistical Dashboard** (Options & volatility statistics) ⭐ **NEW**
+  - **💼 Portfolio Management** (Combined assets)
+  - **🎯 Asset Allocation** (Optimization tools)
+  - **⚠️ Risk Dashboard** (Monitoring & alerts with CVaR) ⭐ **ENHANCED**
+  - **📋 Data Overview** (System status)
+
+#### 4.2 Interactive Features
+- [ ] **Real-time Updates**
+  - Auto-refresh mechanisms
+  - Live price feeds
+  - Dynamic calculations
+  - Progressive loading
+
+- [ ] **User Controls**
+  - Parameter adjustment sliders
+  - Date range selectors
+  - Asset selection filters
+  - Export functionality
+
+#### 4.3 Visualization Suite ⭐ **SIGNIFICANTLY ENHANCED**
+- [ ] **Options Visualizations**
+  - **3D Volatility Surfaces** (Interactive IV surfaces)
+  - **IV vs RV Charts** (Real-time comparison)
+  - **Forward Volatility Charts** (Term structure)
+  - **Call/Put Ratio Historical Charts** (Sentiment analysis)
+  - PnL heatmaps (2D/3D)
+  - Greeks analysis charts
+  - Time decay visualization
+  - Options chain tables with Greeks
+  - Strategy payoff diagrams
+  - Strategy backtesting charts
+
+- [ ] **Statistical Visualizations** ⭐ **NEW**
+  - **Volatility Distribution Histograms**
+  - **Correlation Heatmaps**
+  - **Statistical Summary Tables**
+  - **Seasonality Charts**
+  - **Regime Detection Plots**
+
+- [ ] **Volatility Visualizations**
+  - Forecasting charts
+  - Clustering dendrograms
+  - Regime detection plots
+  - Anomaly detection markers
+
+- [ ] **Portfolio Visualizations**
+  - Asset allocation pie charts
+  - Risk decomposition
+  - Performance tracking
+  - Correlation matrices
+  - **CVaR Distribution Charts** ⭐ **NEW**
+
+---
+
+## 📊 PHASE 2: ENHANCED FEATURES (Future Development)
+
+### 🔹 **5. ADVANCED ANALYTICS**
+- [ ] **Advanced Strategy Analysis**
+  - Options strategies builder
+  - Multi-strategy portfolio optimization
+  - Strategy performance comparison
+  - Advanced strategy optimization algorithms
+
+- [ ] **AI-Powered Strategy Suggestions** ⭐ **FUTURE**
+  - **Intelligent Strategy Recommendations**
+    - ML-based strategy suggestions from options chain analysis
+    - Market condition-based strategy selection
+    - Risk-reward optimized strategy recommendations
+    - Real-time strategy alerts based on market movements
+  
+  - **Smart Strategy Screening**
+    - Automated high-probability strategy identification
+    - Volatility-based strategy suggestions
+    - Time decay optimization recommendations
+    - Greeks-based strategy filtering
+
+- [ ] **Market Intelligence**
+  - Cross-asset correlation analysis
+  - Market regime detection
+  - Sentiment analysis integration
+  - Economic calendar integration
+
+### 🔹 **6. SYSTEM ENHANCEMENTS**
+- [ ] **Performance Optimization**
+  - Caching mechanisms
+  - Async data processing
+  - Database integration
+  - API rate limiting
+
+- [ ] **Export & Integration**
+  - Data export (CSV, Excel)
+  - API endpoints
+  - Third-party integrations
+  - Automated reporting
+
+---
+
+## 🎯 TECHNICAL REQUIREMENTS
+
+### 📋 **Data Sources & APIs**
+- **yfinance:** Historical cryptocurrency data
+- **Deribit API:** BTC/ETH options data
+- **CoinGecko API:** Real-time price updates (backup)
+
+### 📋 **Core Technologies**
+- **Frontend:** Streamlit (Phase 1)
+- **Backend:** Python 3.11+
+- **ML Libraries:** TensorFlow, Scikit-learn
+- **Financial Libraries:** QuantLib, riskfolio-lib
+- **Data Processing:** Pandas, NumPy
+- **Statistics:** SciPy, Statsmodels
+
+### 📋 **Configuration Management**
+- **Coin Mapping:** config/crypto_mapping.yaml
+- **Model Parameters:** config/model_config.yaml
+- **API Settings:** config/api_config.yaml
+- **Dashboard Settings:** config/dashboard_config.yaml
+
+---
+
+## 🚨 CRITICAL FIXES REQUIRED
+
+### ❌ **Issues from crypto_volatility:**
+1. **RNN/LSTM/GRU training failures** - Input shape mismatches
+2. **Model loading errors** - File path issues
+3. **Dashboard crashes** - Missing error handling
+
+### ❌ **Issues from qortfolio:**
+1. **Time-to-maturity calculation bug** - Mathematical error
+2. **Static price updates** - No automatic refresh
+3. **Missing Greeks validation** - No benchmark testing
+
+### ✅ **All Issues Must Be Resolved in V2**
+
+---
+
+## 📅 DEVELOPMENT ROADMAP
+
+### **🚀 Phase 1: Foundation (Week 1-2)** - Core Infrastructure
+**Priority:** Establish solid foundation with critical bug fixes
+
+- [ ] **Week 1: Core Infrastructure**
+  - Fixed time calculation utilities (resolve mathematical bug)
+  - Data collection systems (yfinance + Deribit with error handling)
+  - Basic Black-Scholes with Greeks implementation
+  - Configuration management system
+  - Logging and error handling framework
+
+- [ ] **Week 2: Basic Analytics**
+  - Basic options pricing and Greeks
+  - Simple volatility calculations
+  - Basic Streamlit dashboard structure
+  - Data validation and cleaning
+  - Basic testing framework
+
+### **📊 Phase 2: Analytics Engines (Week 3-4)** - Core Features  
+**Priority:** Implement working analytics with all legacy bugs fixed
+
+- [ ] **Week 3: Options Analytics**
+  - Fixed options chain integration
+  - **Volatility surfaces implementation** ⭐ **NEW**
+  - **Gamma exposure calculations** ⭐ **NEW**
+  - **IV vs RV charts** ⭐ **NEW**
+  - Historical call/put ratio analysis
+
+- [ ] **Week 4: Volatility & ML**
+  - Fixed ML models for volatility forecasting (all 4 models working)
+  - **Statistical analysis on volatility** ⭐ **NEW**
+  - Portfolio management core
+  - Strategy tester foundation
+  - **Forward volatility analysis** ⭐ **NEW**
+
+### **💼 Phase 3: Advanced Features (Week 5-6)** - Professional Features
+**Priority:** Complete portfolio management and risk systems
+
+- [ ] **Week 5: Portfolio & Risk**
+  - Asset allocation models (riskfolio-lib + custom HRP/HERC)
+  - **CVaR implementation** ⭐ **NEW**
+  - Strategy testing & backtesting
+  - Advanced risk management suite
+  - Real-time portfolio monitoring
+
+- [ ] **Week 6: Advanced Analytics**
+  - **Complete statistical analysis dashboard** ⭐ **NEW**
+  - Performance optimization
+  - Advanced visualizations
+  - System reliability improvements
+  - Comprehensive testing
+
+### **🎨 Phase 4: Enhancement & Polish (Week 7-8)** - Professional Polish
+**Priority:** System optimization and preparation for Phase 2
+
+- [ ] **Week 7: System Enhancement**
+  - Performance optimization
+  - Advanced analytics
+  - Export capabilities
+  - API endpoints preparation
+  - Documentation completion
+
+- [ ] **Week 8: Future Preparation**
+  - **AI strategy suggestions foundation** ⭐ **PHASE 2 PREP**
+  - System monitoring
+  - User experience improvements
+  - Deployment preparation
+  - Phase 2 planning
+
+---
+
+## ✅ FEATURE PRIORITY MATRIX
+
+### **🔴 Critical Priority (Week 1-2)**
+- [ ] Fixed time calculations
+- [ ] Data collection with error handling
+- [ ] Basic Black-Scholes & Greeks
+- [ ] Dashboard foundation
+
+### **🟡 High Priority (Week 3-4)**
+- [ ] Volatility surfaces ⭐
+- [ ] Gamma exposure ⭐
+- [ ] IV vs RV analysis ⭐
+- [ ] Statistical analysis ⭐
+- [ ] Fixed ML models
+- [ ] Options chain
+
+### **🟢 Medium Priority (Week 5-6)**
+- [ ] Strategy testing
+- [ ] CVaR implementation ⭐
+- [ ] Asset allocation
+- [ ] Advanced risk management
+
+### **🔵 Lower Priority (Week 7-8)**
+- [ ] Taylor expansion PnL (simple implementation)
+- [ ] Advanced visualizations
+- [ ] Export capabilities
+- [ ] Phase 2 preparation
+
+---
+
+## 🎯 SUCCESS METRICS
+
+### **Technical Metrics:**
+- [ ] Test coverage >90%
+- [ ] Dashboard load time <2 seconds
+- [ ] Options pricing accuracy within 0.1% of benchmarks
+- [ ] ML model training time <5 minutes
+- [ ] All 4 ML models working (MLP, RNN, LSTM, GRU)
+
+### **Business Metrics:**
+- [ ] Real-time price updates every 30 seconds
+- [ ] Support for BTC/ETH options + 10+ crypto volatility
+- [ ] Portfolio calculations for 100+ positions
+- [ ] **Gamma exposure monitoring in real-time** ⭐
+- [ ] **CVaR calculations for risk management** ⭐
+- [ ] **Statistical analysis on all timeframes** ⭐
+
+### **User Experience Metrics:**
+- [ ] **3D volatility surfaces render smoothly** ⭐
+- [ ] **IV vs RV charts update in real-time** ⭐
+- [ ] All dashboard pages load without errors
+- [ ] Export functionality works across all modules
+- [ ] Comprehensive error handling prevents crashes
+
+---
+
+## 📝 HANDOFF INSTRUCTIONS FOR NEW CLAUDE CHAT
+
+### **Context Loading Checklist:**
+1. **📁 Upload to Claude Project:**
+   - This feature requirements document
+   - Current status tracking document
+   - Development roadmap
+   - Cursor rules
+   - Technical specifications
+
+2. **🎯 Quick Context Statement:**
+```
+"I'm continuing Qortfolio V2 development - a quantitative finance platform. 
+Please review the uploaded requirements and current status, then confirm 
+which phase/week we're in and what specific task to work on next."
+```
+
+3. **🔄 Standard Questions for New Chat:**
+   - What phase are we currently in?
+   - What was the last completed feature?
+   - Are there any blocking issues?
+   - What's the next priority task?
+   - Do all the legacy bugs remain fixed?
+
+### **Critical Information Handoff:**
+- **Current development phase & week**
+- **Last completed feature/module**
+- **Any architectural decisions made**
+- **Test results or validation status**
+- **Any blocking issues encountered**
+- **Next priority task from roadmap**
+
+---
+
+**🎯 This updated requirements document ensures seamless development continuation with enhanced features while maintaining focus on critical bug fixes and professional implementation.**

@@ -1,0 +1,754 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# 🗺️ Qortfolio V2 - Step-by-Step Development Roadmap
+
+## 🎯 OVERVIEW
+
+This roadmap provides detailed, step-by-step instructions for developing Qortfolio V2 across multiple Claude chats. Each section includes specific tasks, acceptance criteria, and handoff instructions.
+
+**Total Timeline:** 8 weeks  
+**Methodology:** Agile development with weekly sprints  
+**Handoff Strategy:** Seamless continuation between Claude chats  
+
+---
+
+## 📋 PHASE 1: FOUNDATION (Week 1-2)
+**Goal:** Establish rock-solid foundation with critical bug fixes
+
+### 🚀 **WEEK 1: CORE INFRASTRUCTURE**
+
+#### **Day 1-2: Project Setup & Core Utilities**
+**Tasks:**
+1. **Create Project Structure**
+   ```
+   qortfolio-v2/
+   ├── src/
+   │   ├── core/
+   │   │   ├── __init__.py
+   │   │   ├── config.py
+   │   │   ├── logging.py
+   │   │   ├── exceptions.py
+   │   │   └── utils/
+   │   │       ├── __init__.py
+   │   │       ├── time_utils.py      # CRITICAL: Fix time calculation bug
+   │   │       ├── math_utils.py
+   │   │       └── validation.py
+   │   ├── data/
+   │   ├── models/
+   │   ├── analytics/
+   │   └── dashboard/
+   ├── tests/
+   ├── config/
+   └── docs/
+   ```
+
+2. **Implement Fixed Time Utilities** ⚠️ **CRITICAL BUG FIX**
+   ```python
+   # Fix the mathematical error from legacy repos
+   def calculate_time_to_maturity(current_time, expiry_time):
+       """
+       CORRECT: time_diff.total_seconds() / (365.25 * 24 * 3600)
+       NOT: time_diff.total_seconds() / 31536000 * 365  # This was wrong!
+       """
+   ```
+
+3. **Configuration Management System**
+   - Create `config/crypto_mapping.yaml` for coin name mapping
+   - Create `config/api_config.yaml` for API settings
+   - Implement environment variable support
+
+**Acceptance Criteria:**
+- [ ] Project structure created correctly
+- [ ] Time calculation bug fixed and tested
+- [ ] Configuration system working
+- [ ] Basic logging implemented
+- [ ] All core utilities have tests with >90% coverage
+
+**Handoff Notes:** 
+- Document any time calculation test results
+- Note any configuration decisions made
+- Record which crypto mappings were set up
+
+---
+
+#### **Day 3-5: Data Collection Foundation**
+**Tasks:**
+1. **Implement yfinance Integration**
+   ```python
+   # src/data/collectors/crypto_collector.py
+   class CryptoCollector:
+       def get_historical_data(self, ticker: str, period: str) -> pd.DataFrame:
+           # Include comprehensive error handling
+           # Validate data after collection
+           # Handle rate limiting
+   ```
+
+2. **Implement Deribit Integration**
+   ```python
+   # src/data/collectors/deribit_collector.py
+   class DeribitCollector:
+       def get_options_data(self, currency: str) -> pd.DataFrame:
+           # Fix time-to-maturity calculations
+           # Include comprehensive error handling
+           # Implement rate limiting
+   ```
+
+3. **Data Validation Framework**
+   ```python
+   # src/data/validators/data_validator.py
+   def validate_options_data(data: pd.DataFrame) -> pd.DataFrame:
+       # Remove invalid entries
+       # Log validation results
+       # Handle edge cases
+   ```
+
+**Acceptance Criteria:**
+- [ ] yfinance integration working with error handling
+- [ ] Deribit API integration working
+- [ ] Data validation preventing invalid entries
+- [ ] Rate limiting implemented
+- [ ] All data collectors tested
+
+**Handoff Notes:**
+- Document API credentials setup process
+- Note any rate limiting discoveries
+- Record data validation rules implemented
+
+---
+
+### 📊 **WEEK 2: BASIC ANALYTICS**
+
+#### **Day 1-3: Black-Scholes Implementation**
+**Tasks:**
+1. **Core Black-Scholes Model**
+   ```python
+   # src/models/options/black_scholes.py
+   class BlackScholesModel:
+       def option_price(self, params: OptionParameters) -> float:
+           # Implement with fixed time calculations
+           # Include comprehensive validation
+       
+       def calculate_greeks(self, params: OptionParameters) -> GreeksResult:
+           # Delta, Gamma, Theta, Vega, Rho
+           # Include gamma exposure calculations ⭐ NEW
+   ```
+
+2. **Greeks Validation**
+   ```python
+   # tests/test_black_scholes.py
+   BENCHMARK_CASES = [
+       {
+           'spot': 100, 'strike': 100, 'tte': 0.25, 'vol': 0.20, 'rate': 0.05,
+           'expected_delta': 0.6368, 'expected_gamma': 0.0188
+       }
+   ]
+   ```
+
+3. **Gamma Exposure Calculations** ⭐ **NEW FEATURE**
+   ```python
+   def calculate_gamma_exposure(positions: List[Position]) -> float:
+       # Portfolio-level gamma exposure
+       # Individual position gamma risk
+       # Real-time gamma monitoring
+   ```
+
+**Acceptance Criteria:**
+- [ ] Black-Scholes pricing within 0.1% of benchmarks
+- [ ] All Greeks calculated and validated
+- [ ] Gamma exposure calculations working
+- [ ] Comprehensive test coverage >95%
+- [ ] No time calculation bugs
+
+**Handoff Notes:**
+- Document Greeks validation results
+- Note any numerical precision issues
+- Record gamma exposure test results
+
+---
+
+#### **Day 4-5: Basic Dashboard Structure**
+**Tasks:**
+1. **Streamlit Dashboard Foundation**
+   ```python
+   # src/dashboard/app.py
+   def main():
+       st.set_page_config(page_title="Qortfolio V2", layout="wide")
+       # Create basic navigation structure
+       # Implement session state management
+   ```
+
+2. **Basic Options Analytics Page**
+   ```python
+   # src/dashboard/pages/options_analytics.py
+   def create_options_page():
+       # Basic options pricing interface
+       # Real-time price display
+       # Basic Greeks display
+   ```
+
+3. **Data Overview Page**
+   ```python
+   # src/dashboard/pages/data_overview.py
+   def create_data_page():
+       # System status monitoring
+       # Data freshness indicators
+       # API connection status
+   ```
+
+**Acceptance Criteria:**
+- [ ] Dashboard loads without errors
+- [ ] Basic navigation working
+- [ ] Options pricing interface functional
+- [ ] Real-time data updates working
+- [ ] Session state management stable
+
+**Handoff Notes:**
+- Document dashboard architecture decisions
+- Note any Streamlit performance issues
+- Record user interface design choices
+
+---
+
+## 📈 PHASE 2: ANALYTICS ENGINES (Week 3-4)
+**Goal:** Implement core analytics with all legacy bugs fixed
+
+### 🌋 **WEEK 3: OPTIONS ANALYTICS**
+
+#### **Day 1-2: Volatility Surfaces** ⭐ **NEW PRIORITY FEATURE**
+**Tasks:**
+1. **3D Volatility Surface Implementation**
+   ```python
+   # src/analytics/volatility/surface_calculator.py
+   class VolatilitySurfaceCalculator:
+       def calculate_iv_surface(self, options_data: pd.DataFrame) -> np.ndarray:
+           # Create 3D surface from options chain
+           # Handle sparse data interpolation
+           # Validate surface arbitrage-free
+   ```
+
+2. **Interactive Surface Visualization**
+   ```python
+   # src/dashboard/components/volatility_surface.py
+   def create_3d_surface_plot(surface_data: np.ndarray) -> go.Figure:
+       # Interactive 3D plotly visualization
+       # Real-time surface updates
+       # User controls for viewing angles
+   ```
+
+**Acceptance Criteria:**
+- [ ] 3D IV surface calculates correctly
+- [ ] Interactive visualization renders smoothly
+- [ ] Surface updates in real-time
+- [ ] Arbitrage detection working
+- [ ] Performance <2 seconds for surface generation
+
+---
+
+#### **Day 3-4: IV vs RV Analysis** ⭐ **PHASE 1 PRIORITY**
+**Tasks:**
+1. **Real-time IV vs RV Calculator**
+   ```python
+   # src/analytics/volatility/iv_rv_analyzer.py
+   class IVRVAnalyzer:
+       def calculate_realized_volatility(self, price_data: pd.DataFrame) -> float:
+           # Multiple volatility estimators
+           # Parkinson, Garman-Klass, Rogers-Satchell
+       
+       def get_iv_rv_spread(self, options_data: pd.DataFrame) -> pd.DataFrame:
+           # IV premium/discount analysis
+           # Term structure comparison
+   ```
+
+2. **Forward Volatility Analysis**
+   ```python
+   def calculate_forward_volatility(self, iv_data: pd.DataFrame) -> pd.DataFrame:
+       # Forward-looking volatility estimates
+       # Term structure forecasting
+       # Event-driven volatility analysis
+   ```
+
+**Acceptance Criteria:**
+- [ ] IV vs RV calculations accurate
+- [ ] Real-time charts updating
+- [ ] Forward volatility estimates working
+- [ ] Term structure analysis functional
+- [ ] All volatility estimators validated
+
+---
+
+#### **Day 5: Historical Call/Put Ratio** ⭐ **NEW FEATURE**
+**Tasks:**
+1. **Call/Put Ratio Calculator**
+   ```python
+   # src/analytics/options/ratio_analyzer.py
+   class CallPutRatioAnalyzer:
+       def calculate_volume_ratio(self, options_data: pd.DataFrame) -> pd.DataFrame:
+           # Daily call/put volume ratios
+           # Open interest ratios
+           # Weighted average calculations
+       
+       def analyze_sentiment_patterns(self, ratio_data: pd.DataFrame) -> Dict:
+           # Sentiment indicators
+           # Historical patterns
+           # Extreme readings identification
+   ```
+
+**Acceptance Criteria:**
+- [ ] Call/put ratios calculated correctly
+- [ ] Historical pattern analysis working
+- [ ] Sentiment indicators accurate
+- [ ] Real-time ratio updates
+- [ ] Extreme readings detected
+
+**WEEK 3 HANDOFF:**
+- Document volatility surface performance
+- Note IV vs RV calculation accuracy
+- Record call/put ratio patterns discovered
+
+---
+
+### 🤖 **WEEK 4: VOLATILITY & ML**
+
+#### **Day 1-3: Fixed ML Models** ⚠️ **CRITICAL BUG FIXES**
+**Tasks:**
+1. **Fix RNN Input Shape Issues**
+   ```python
+   # src/models/volatility/rnn_forecaster.py
+   def prepare_sequences(self, X: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+       # FIXED: Proper sequence reshaping
+       # FIXED: Input validation
+       # FIXED: Shape consistency
+   ```
+
+2. **Implement All 4 Models**
+   ```python
+   # MLP - Already working (validate)
+   # RNN - Fix shape mismatches
+   # LSTM - Fix sequence handling  
+   # GRU - Fix input processing
+   ```
+
+3. **Model Validation Framework**
+   ```python
+   # tests/test_ml_models.py
+   def test_all_models_training():
+       # Test all 4 models train successfully
+       # Validate prediction shapes
+       # Check performance metrics
+   ```
+
+**Acceptance Criteria:**
+- [ ] All 4 ML models train successfully
+- [ ] No more input shape errors
+- [ ] Model performance validated
+- [ ] Prediction accuracy within expectations
+- [ ] Model persistence working
+
+---
+
+#### **Day 4-5: Statistical Analysis** ⭐ **NEW FEATURE**
+**Tasks:**
+1. **Volatility Statistical Analysis**
+   ```python
+   # src/analytics/statistics/volatility_stats.py
+   class VolatilityStatistics:
+       def calculate_descriptive_stats(self, vol_data: pd.DataFrame) -> Dict:
+           # Mean, median, std, skewness, kurtosis
+           # Percentile distributions
+           # Volatility clustering metrics
+       
+       def analyze_patterns(self, vol_data: pd.DataFrame) -> Dict:
+           # Intraday patterns
+           # Day-of-week effects
+           # Seasonal patterns
+   ```
+
+2. **Cross-Asset Analysis**
+   ```python
+   def calculate_volatility_correlations(self, multi_asset_data: Dict) -> pd.DataFrame:
+       # Cross-asset volatility correlations
+       # Lead-lag relationships
+       # Spillover effects
+   ```
+
+**Acceptance Criteria:**
+- [ ] Statistical calculations accurate
+- [ ] Pattern analysis working
+- [ ] Correlation analysis functional
+- [ ] Seasonal effects detected
+- [ ] Cross-asset analysis complete
+
+**WEEK 4 HANDOFF:**
+- Document ML model fix success
+- Note statistical analysis results
+- Record any performance issues
+
+---
+
+## 💼 PHASE 3: ADVANCED FEATURES (Week 5-6)
+**Goal:** Complete portfolio management and risk systems
+
+### 🎯 **WEEK 5: PORTFOLIO & RISK**
+
+#### **Day 1-2: Asset Allocation**
+**Tasks:**
+1. **Riskfolio-lib Integration**
+   ```python
+   # src/models/portfolio/allocation_engine.py
+   class AllocationEngine:
+       def optimize_portfolio(self, returns_data: pd.DataFrame, method: str) -> Dict:
+           # Modern Portfolio Theory
+           # Risk parity methods
+           # Black-Litterman model
+   ```
+
+2. **Custom HRP/HERC Implementation**
+   ```python
+   def hierarchical_risk_parity(self, returns_data: pd.DataFrame) -> np.ndarray:
+       # Your existing HRP model
+       # Enhanced with new features
+   
+   def hierarchical_equal_risk_contribution(self, returns_data: pd.DataFrame) -> np.ndarray:
+       # Your existing HERC model
+       # Enhanced implementation
+   ```
+
+**Acceptance Criteria:**
+- [ ] riskfolio-lib integration working
+- [ ] HRP model implemented and tested
+- [ ] HERC model implemented and tested
+- [ ] Portfolio optimization functional
+- [ ] Risk metrics calculated correctly
+
+---
+
+#### **Day 3-4: CVaR Implementation** ⭐ **NEW FEATURE**
+**Tasks:**
+1. **Conditional Value at Risk Calculator**
+   ```python
+   # src/analytics/risk/cvar_calculator.py
+   class CVaRCalculator:
+       def calculate_cvar(self, returns: pd.Series, confidence_level: float = 0.05) -> float:
+           # Expected shortfall calculations
+           # Tail risk analysis
+           # Multiple confidence levels
+       
+       def optimize_cvar_portfolio(self, returns_data: pd.DataFrame) -> np.ndarray:
+           # CVaR-based position sizing
+           # Risk-constrained optimization
+   ```
+
+2. **CVaR Visualization**
+   ```python
+   def create_cvar_distribution_chart(self, returns_data: pd.Series) -> go.Figure:
+       # CVaR distribution visualization
+       # Tail risk highlighting
+       # Interactive confidence level adjustment
+   ```
+
+**Acceptance Criteria:**
+- [ ] CVaR calculations mathematically correct
+- [ ] CVaR optimization working
+- [ ] Tail risk analysis accurate
+- [ ] Visualization interactive and informative
+- [ ] Performance acceptable for real-time use
+
+---
+
+#### **Day 5: Strategy Testing Foundation**
+**Tasks:**
+1. **Strategy Tester Framework**
+   ```python
+   # src/analytics/strategies/strategy_tester.py
+   class StrategyTester:
+       def backtest_strategy(self, strategy: OptionsStrategy, historical_data: pd.DataFrame) -> Dict:
+           # Multi-leg strategy construction
+           # Historical backtesting
+           # Performance metrics calculation
+   ```
+
+**Acceptance Criteria:**
+- [ ] Strategy framework implemented
+- [ ] Basic backtesting working
+- [ ] Performance metrics calculated
+- [ ] Multi-leg strategies supported
+
+**WEEK 5 HANDOFF:**
+- Document allocation model performance
+- Note CVaR implementation accuracy
+- Record strategy testing framework status
+
+---
+
+### 📊 **WEEK 6: ADVANCED ANALYTICS**
+
+#### **Day 1-3: Statistical Dashboard** ⭐ **NEW FEATURE**
+**Tasks:**
+1. **Comprehensive Statistics Page**
+   ```python
+   # src/dashboard/pages/statistical_dashboard.py
+   def create_statistics_page():
+       # Volatility distribution histograms
+       # Correlation heatmaps
+       # Statistical summary tables
+       # Seasonality charts
+   ```
+
+2. **Advanced Visualizations**
+   ```python
+   def create_correlation_heatmap(self, correlation_matrix: pd.DataFrame) -> go.Figure:
+       # Interactive correlation visualization
+       # Dynamic correlation updates
+       # Cross-asset analysis
+   ```
+
+**Acceptance Criteria:**
+- [ ] Statistical dashboard comprehensive
+- [ ] All visualizations interactive
+- [ ] Real-time updates working
+- [ ] Performance optimized
+- [ ] User experience smooth
+
+---
+
+#### **Day 4-5: System Optimization**
+**Tasks:**
+1. **Performance Optimization**
+   ```python
+   # Implement caching strategies
+   # Optimize data processing
+   # Reduce memory usage
+   # Improve dashboard responsiveness
+   ```
+
+2. **Comprehensive Testing**
+   ```python
+   # Achieve >90% test coverage
+   # Integration tests for all modules
+   # Performance tests
+   # Financial validation tests
+   ```
+
+**Acceptance Criteria:**
+- [ ] Dashboard loads in <2 seconds
+- [ ] All calculations optimized
+- [ ] Test coverage >90%
+- [ ] No memory leaks
+- [ ] All features stable
+
+**WEEK 6 HANDOFF:**
+- Document performance optimizations
+- Note test coverage achievements
+- Record any remaining issues
+
+---
+
+## 🎨 PHASE 4: ENHANCEMENT & POLISH (Week 7-8)
+**Goal:** Professional polish and Phase 2 preparation
+
+### 🚀 **WEEK 7: SYSTEM ENHANCEMENT**
+
+#### **Day 1-3: Advanced Features**
+**Tasks:**
+1. **Export Capabilities**
+   ```python
+   # src/core/exporters/data_exporter.py
+   class DataExporter:
+       def export_to_csv(self, data: pd.DataFrame, filename: str) -> None:
+       def export_to_excel(self, data_dict: Dict[str, pd.DataFrame], filename: str) -> None:
+       def export_to_pdf(self, charts: List[go.Figure], filename: str) -> None:
+   ```
+
+2. **API Endpoints Preparation**
+   ```python
+   # src/api/routes/options_routes.py
+   # Basic FastAPI endpoint structure for Phase 2
+   ```
+
+**Acceptance Criteria:**
+- [ ] Export functionality working
+- [ ] Multiple export formats supported
+- [ ] API structure prepared
+- [ ] Documentation updated
+
+---
+
+#### **Day 4-5: Documentation & Monitoring**
+**Tasks:**
+1. **Complete Documentation**
+   ```markdown
+   # docs/user_guide.md
+   # docs/api_reference.md  
+   # docs/technical_architecture.md
+   ```
+
+2. **System Monitoring**
+   ```python
+   # Performance monitoring
+   # Error tracking
+   # Usage analytics
+   ```
+
+**Acceptance Criteria:**
+- [ ] Documentation comprehensive
+- [ ] Monitoring implemented
+- [ ] Performance tracked
+- [ ] Error reporting working
+
+---
+
+### 🌟 **WEEK 8: FUTURE PREPARATION**
+
+#### **Day 1-3: AI Strategy Suggestions Foundation** ⭐ **PHASE 2 PREP**
+**Tasks:**
+1. **ML Strategy Analysis Framework**
+   ```python
+   # src/analytics/ai/strategy_analyzer.py
+   class StrategyAnalyzer:
+       def analyze_market_conditions(self, market_data: Dict) -> Dict:
+           # Market regime detection for strategies
+           # Volatility-based strategy screening
+           # Risk-reward analysis
+   ```
+
+2. **Strategy Suggestion Engine Foundation**
+   ```python
+   def prepare_strategy_features(self, options_chain: pd.DataFrame) -> pd.DataFrame:
+       # Feature engineering for strategy ML
+       # Pattern recognition preparation
+       # Market condition classification
+   ```
+
+**Acceptance Criteria:**
+- [ ] AI framework foundation ready
+- [ ] Feature engineering implemented
+- [ ] Market analysis working
+- [ ] Ready for Phase 2 expansion
+
+---
+
+#### **Day 4-5: Final Integration & Testing**
+**Tasks:**
+1. **End-to-End Testing**
+   ```python
+   # Complete system integration tests
+   # User acceptance testing scenarios
+   # Performance benchmarking
+   ```
+
+2. **Deployment Preparation**
+   ```python
+   # Environment setup scripts
+   # Deployment documentation
+   # Production readiness checklist
+   ```
+
+**Acceptance Criteria:**
+- [ ] All features integrated smoothly
+- [ ] System performance meets targets
+- [ ] Ready for production deployment
+- [ ] Phase 2 roadmap prepared
+
+---
+
+## 🔄 HANDOFF PROTOCOL FOR NEW CLAUDE CHATS
+
+### **Starting New Chat Checklist:**
+1. **Upload Context Files:**
+   - [ ] This roadmap document
+   - [ ] Current status document
+   - [ ] Feature requirements
+   - [ ] Cursor rules
+   - [ ] Technical specifications
+
+2. **Context Loading Message:**
+```
+Hi Claude! I'm continuing Qortfolio V2 development. Please review:
+1. DEVELOPMENT_ROADMAP.md - for current phase/week
+2. CURRENT_STATUS.md - for last completed tasks  
+3. FEATURE_REQUIREMENTS.md - for scope validation
+
+Current Context:
+- Phase: [X] Week: [Y]
+- Last Completed: [specific task]
+- Next Priority: [next task from roadmap]
+
+Please confirm understanding and tell me the next specific task to work on.
+```
+
+### **Progress Tracking Requirements:**
+After each development session, update:
+- [ ] `CURRENT_STATUS.md` with completed tasks
+- [ ] `DEVELOPMENT_ROADMAP.md` with progress markers
+- [ ] `TECHNICAL_NOTES.md` with any issues/decisions
+- [ ] Test results and validation status
+
+### **Handoff Information Template:**
+```markdown
+## Session Handoff - [Date]
+
+### Completed:
+- [x] [Task 1] - [Status/Notes]
+- [x] [Task 2] - [Status/Notes]
+
+### Current Phase: [Phase X, Week Y]
+
+### Next Priority: [Next task from roadmap]
+
+### Blocking Issues: [None/Issues]
+
+### Technical Notes:
+- [Any important decisions made]
+- [Performance observations]
+- [Testing results]
+
+### Validation Status:
+- [ ] Tests passing
+- [ ] Performance acceptable
+- [ ] Documentation updated
+```
+
+---
+
+## ✅ SUCCESS VALIDATION
+
+### **Phase Completion Criteria:**
+
+**Phase 1 Complete:**
+- [ ] All time calculation bugs fixed
+- [ ] Data collection working with error handling
+- [ ] Basic Black-Scholes & Greeks implemented
+- [ ] Dashboard foundation stable
+
+**Phase 2 Complete:**
+- [ ] Volatility surfaces working ⭐
+- [ ] IV vs RV analysis functional ⭐
+- [ ] All 4 ML models fixed and working
+- [ ] Statistical analysis implemented ⭐
+- [ ] Gamma exposure calculations working ⭐
+
+**Phase 3 Complete:**
+- [ ] Asset allocation models implemented
+- [ ] CVaR calculations working ⭐
+- [ ] Strategy testing framework functional
+- [ ] Portfolio management complete
+
+**Phase 4 Complete:**
+- [ ] System optimized and polished
+- [ ] Documentation complete
+- [ ] Export capabilities working
+- [ ] Ready for Phase 2 (AI features)
+
+### **Overall Project Success:**
+- [ ] All legacy bugs eliminated
+- [ ] All new features implemented
+- [ ] Test coverage >90%
+- [ ] Dashboard professional and stable
+- [ ] Ready for production use
+
+---
+
+**🎯 This roadmap ensures systematic development with clear milestones and seamless handoffs between Claude chats, guaranteeing project continuity and success.**
