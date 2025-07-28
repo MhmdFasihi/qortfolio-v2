@@ -16,10 +16,17 @@ from scipy.stats import norm
 from typing import Union, Optional, Dict, Tuple
 from datetime import datetime
 from dataclasses import dataclass
+from enum import Enum
 
 from core.utils.time_utils import calculate_time_to_maturity
 from core.logging import get_logger
 from core.config import get_config
+
+
+class OptionType(Enum):
+    """Option types enumeration."""
+    CALL = "call"
+    PUT = "put"
 
 
 @dataclass
@@ -30,7 +37,7 @@ class OptionParameters:
     time_to_maturity: float
     volatility: float
     risk_free_rate: float
-    option_type: str  # 'call' or 'put'
+    option_type: OptionType
     dividend_yield: float = 0.0
 
 
@@ -101,7 +108,7 @@ class BlackScholesModel:
         σ = params.volatility
         r = params.risk_free_rate
         q = params.dividend_yield
-        option_type = params.option_type.lower()
+        option_type = params.option_type.value if isinstance(params.option_type, OptionType) else params.option_type.lower()
         
         try:
             # Calculate d1 and d2
@@ -160,168 +167,19 @@ class BlackScholesModel:
             })
             raise
     
-    def calculate_option_price_simple(self, spot: float, strike: float, 
-                                    time_to_maturity: float, volatility: float,
-                                    option_type: str = 'call', 
-                                    risk_free_rate: Optional[float] = None) -> float:
+    def calculate_greeks(self, params: OptionParameters) -> OptionPricing:
         """
-        Simplified option pricing for quick calculations.
+        Calculate Greeks (alias for calculate_option_price for compatibility).
         
         Args:
-            spot: Current spot price
-            strike: Strike price
-            time_to_maturity: Time to maturity in years
-            volatility: Implied volatility (annualized)
-            option_type: 'call' or 'put'
-            risk_free_rate: Risk-free rate (uses default if None)
+            params: Option parameters
             
         Returns:
-            Option price
+            Complete option pricing results with all Greeks
         """
-        params = OptionParameters(
-            spot_price=spot,
-            strike_price=strike,
-            time_to_maturity=time_to_maturity,
-            volatility=volatility,
-            risk_free_rate=risk_free_rate or self.default_risk_free_rate,
-            option_type=option_type
-        )
-        
-        result = self.calculate_option_price(params)
-        return result.option_price
+        return self.calculate_option_price(params)
     
-    def calculate_implied_volatility(self, market_price: float, spot: float, 
-                                   strike: float, time_to_maturity: float,
-                                   option_type: str = 'call',
-                                   risk_free_rate: Optional[float] = None,
-                                   max_iterations: int = 100,
-                                   tolerance: float = 1e-6) -> Optional[float]:
-        """
-        Calculate implied volatility using Newton-Raphson method.
-        
-        Args:
-            market_price: Observed market price
-            spot: Current spot price
-            strike: Strike price
-            time_to_maturity: Time to maturity in years
-            option_type: 'call' or 'put'
-            risk_free_rate: Risk-free rate
-            max_iterations: Maximum iterations for convergence
-            tolerance: Convergence tolerance
-            
-        Returns:
-            Implied volatility or None if convergence failed
-        """
-        risk_free_rate = risk_free_rate or self.default_risk_free_rate
-        
-        # Initial guess (using rule of thumb)
-        vol = 0.2  # Start with 20% volatility
-        
-        for i in range(max_iterations):
-            try:
-                # Calculate theoretical price and vega
-                params = OptionParameters(
-                    spot_price=spot,
-                    strike_price=strike,
-                    time_to_maturity=time_to_maturity,
-                    volatility=vol,
-                    risk_free_rate=risk_free_rate,
-                    option_type=option_type
-                )
-                
-                result = self.calculate_option_price(params)
-                theoretical_price = result.option_price
-                vega = result.vega
-                
-                # Price difference
-                price_diff = theoretical_price - market_price
-                
-                # Check convergence
-                if abs(price_diff) < tolerance:
-                    self.logger.debug(f"IV converged in {i+1} iterations", extra={
-                        "implied_volatility": vol,
-                        "market_price": market_price,
-                        "theoretical_price": theoretical_price
-                    })
-                    return vol
-                
-                # Newton-Raphson update
-                if abs(vega) < 1e-10:  # Avoid division by zero
-                    break
-                
-                vol = vol - price_diff / (vega * 100)  # vega is per 1% vol change
-                
-                # Keep volatility in reasonable bounds
-                vol = max(0.001, min(vol, 10.0))  # 0.1% to 1000%
-                
-            except Exception as e:
-                self.logger.warning(f"IV calculation iteration {i} failed: {e}")
-                break
-        
-        self.logger.warning("Implied volatility calculation did not converge", extra={
-            "market_price": market_price,
-            "spot": spot,
-            "strike": strike,
-            "time_to_maturity": time_to_maturity
-        })
-        return None
-    
-    def calculate_portfolio_greeks(self, positions: List[Dict]) -> Dict[str, float]:
-        """
-        Calculate portfolio-level Greeks.
-        
-        Args:
-            positions: List of position dictionaries with:
-                - quantity: Number of contracts (positive for long, negative for short)
-                - spot_price, strike_price, time_to_maturity, volatility, risk_free_rate, option_type
-                
-        Returns:
-            Dictionary with portfolio Greeks
-        """
-        portfolio_greeks = {
-            'delta': 0.0,
-            'gamma': 0.0,
-            'theta': 0.0,
-            'vega': 0.0,
-            'rho': 0.0,
-            'total_value': 0.0
-        }
-        
-        for position in positions:
-            try:
-                quantity = position['quantity']
-                
-                # Create option parameters
-                params = OptionParameters(
-                    spot_price=position['spot_price'],
-                    strike_price=position['strike_price'],
-                    time_to_maturity=position['time_to_maturity'],
-                    volatility=position['volatility'],
-                    risk_free_rate=position.get('risk_free_rate', self.default_risk_free_rate),
-                    option_type=position['option_type'],
-                    dividend_yield=position.get('dividend_yield', 0.0)
-                )
-                
-                # Calculate option pricing
-                result = self.calculate_option_price(params)
-                
-                # Add to portfolio totals
-                portfolio_greeks['delta'] += quantity * result.delta
-                portfolio_greeks['gamma'] += quantity * result.gamma
-                portfolio_greeks['theta'] += quantity * result.theta
-                portfolio_greeks['vega'] += quantity * result.vega
-                portfolio_greeks['rho'] += quantity * result.rho
-                portfolio_greeks['total_value'] += quantity * result.option_price
-                
-            except Exception as e:
-                self.logger.warning(f"Failed to calculate Greeks for position: {e}")
-                continue
-        
-        return portfolio_greeks
-    
-    # Private methods for calculations
-    
-    def _calculate_d1_d2(self, S: float, K: float, T: float, r: float, σ: float, q: float = 0.0) -> Tuple[float, float]:
+    def _calculate_d1_d2(self, S: float, K: float, T: float, r: float, σ: float, q: float) -> Tuple[float, float]:
         """Calculate d1 and d2 parameters."""
         d1 = (np.log(S / K) + (r - q + 0.5 * σ**2) * T) / (σ * np.sqrt(T))
         d2 = d1 - σ * np.sqrt(T)
@@ -385,75 +243,13 @@ class BlackScholesModel:
             raise ValueError("Time to maturity cannot be negative")
         if params.volatility <= 0:
             raise ValueError("Volatility must be positive")
-        if params.option_type.lower() not in ['call', 'put']:
+        
+        option_type = params.option_type.value if isinstance(params.option_type, OptionType) else params.option_type
+        if option_type.lower() not in ['call', 'put']:
             raise ValueError("Option type must be 'call' or 'put'")
 
 
-# Vectorized functions for batch calculations
-def calculate_black_scholes_vectorized(spot_prices: np.ndarray, strike_prices: np.ndarray,
-                                     times_to_maturity: np.ndarray, volatilities: np.ndarray,
-                                     risk_free_rates: np.ndarray, option_types: np.ndarray) -> pd.DataFrame:
-    """
-    Vectorized Black-Scholes calculation for multiple options.
-    
-    Args:
-        spot_prices: Array of spot prices
-        strike_prices: Array of strike prices
-        times_to_maturity: Array of times to maturity
-        volatilities: Array of volatilities
-        risk_free_rates: Array of risk-free rates
-        option_types: Array of option types ('call' or 'put')
-        
-    Returns:
-        DataFrame with pricing results
-    """
-    # This would be implemented for high-performance batch calculations
-    # For now, we'll use the single-option method in a loop
-    
-    bs_model = BlackScholesModel()
-    results = []
-    
-    for i in range(len(spot_prices)):
-        try:
-            params = OptionParameters(
-                spot_price=spot_prices[i],
-                strike_price=strike_prices[i],
-                time_to_maturity=times_to_maturity[i],
-                volatility=volatilities[i],
-                risk_free_rate=risk_free_rates[i],
-                option_type=option_types[i]
-            )
-            
-            result = bs_model.calculate_option_price(params)
-            results.append({
-                'spot_price': spot_prices[i],
-                'strike_price': strike_prices[i],
-                'time_to_maturity': times_to_maturity[i],
-                'volatility': volatilities[i],
-                'option_type': option_types[i],
-                'option_price': result.option_price,
-                'delta': result.delta,
-                'gamma': result.gamma,
-                'theta': result.theta,
-                'vega': result.vega,
-                'rho': result.rho,
-                'intrinsic_value': result.intrinsic_value,
-                'time_value': result.time_value,
-                'moneyness': result.moneyness
-            })
-            
-        except Exception as e:
-            # Handle individual failures
-            results.append({
-                'spot_price': spot_prices[i],
-                'strike_price': strike_prices[i],
-                'error': str(e)
-            })
-    
-    return pd.DataFrame(results)
-
-
-# Convenience functions
+# Convenience functions for quick calculations
 def price_option(spot: float, strike: float, time_to_maturity: float, 
                 volatility: float, option_type: str = 'call', 
                 risk_free_rate: float = 0.05) -> float:
@@ -472,9 +268,18 @@ def price_option(spot: float, strike: float, time_to_maturity: float,
         Option price
     """
     bs_model = BlackScholesModel()
-    return bs_model.calculate_option_price_simple(
-        spot, strike, time_to_maturity, volatility, option_type, risk_free_rate
+    
+    params = OptionParameters(
+        spot_price=spot,
+        strike_price=strike,
+        time_to_maturity=time_to_maturity,
+        volatility=volatility,
+        risk_free_rate=risk_free_rate,
+        option_type=OptionType.CALL if option_type.lower() == 'call' else OptionType.PUT
     )
+    
+    result = bs_model.calculate_option_price(params)
+    return result.option_price
 
 
 def calculate_greeks(spot: float, strike: float, time_to_maturity: float,
@@ -495,13 +300,14 @@ def calculate_greeks(spot: float, strike: float, time_to_maturity: float,
         Dictionary with all Greeks
     """
     bs_model = BlackScholesModel()
+    
     params = OptionParameters(
         spot_price=spot,
         strike_price=strike,
         time_to_maturity=time_to_maturity,
         volatility=volatility,
         risk_free_rate=risk_free_rate,
-        option_type=option_type
+        option_type=OptionType.CALL if option_type.lower() == 'call' else OptionType.PUT
     )
     
     result = bs_model.calculate_option_price(params)
@@ -561,17 +367,5 @@ if __name__ == "__main__":
             print(f"  {key.capitalize()}: {value:.4f}")
         else:
             print(f"  {key.replace('_', ' ').title()}: {value:.4f}")
-    
-    # Test implied volatility calculation
-    print(f"\n🔍 Implied Volatility Test:")
-    market_price = call_greeks['price']
-    implied_vol = bs_model.calculate_implied_volatility(
-        market_price, spot, strike, time_to_maturity, 'call', risk_free_rate
-    )
-    if implied_vol:
-        print(f"  Market price: ${market_price:.2f}")
-        print(f"  Implied volatility: {implied_vol:.1%}")
-        print(f"  Original volatility: {volatility:.1%}")
-        print(f"  Difference: {abs(implied_vol - volatility):.4f}")
     
     print("\n✅ Black-Scholes implementation test completed!")
