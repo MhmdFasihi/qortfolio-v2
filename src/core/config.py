@@ -4,27 +4,29 @@
 # Contact for commercial licensing: mhmd.fasihi@gmail.com
 
 """
-Configuration Management System for Qortfolio V2 - Complete Fix
+Configuration Management System for Qortfolio V2 - COMPLETE FIX
 Location: src/core/config.py
 
-This fixes ALL the configuration interface issues to match what tests expect.
+This fixes ALL the configuration interface issues to match what the dashboard expects.
+Includes all missing methods that were causing crashes.
 """
 
 import os
 import json
+import yaml
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
 import logging
 
-# Custom exception that tests expect
+# Custom exception that the system expects
 class ConfigurationError(Exception):
     """Configuration-related errors."""
     pass
 
 @dataclass
 class CryptoCurrency:
-    """Configuration for a cryptocurrency - matches test expectations."""
+    """Configuration for a cryptocurrency - matches system expectations."""
     symbol: str
     name: str
     yfinance_ticker: str
@@ -41,45 +43,234 @@ class CryptoCurrency:
 
 class ConfigManager:
     """
-    Configuration manager that provides the interface tests expect.
-    Complete implementation with all missing methods.
+    Complete Configuration Manager with ALL missing methods implemented.
+    
+    This fixes the critical dashboard crash by providing all expected methods:
+    - get_cache_ttl()
+    - get_deribit_currency()
+    - deribit_currencies property
+    - get_config_summary()
+    - And all other required configuration methods
     """
     
     def __init__(self):
-        """Initialize configuration manager."""
+        """Initialize configuration manager with comprehensive setup."""
         self.logger = logging.getLogger("config_manager")
         
-        # Basic configuration storage
+        # Configuration storage
         self._config_data: Dict[str, Any] = {}
         self._cryptocurrencies: List[CryptoCurrency] = []
         
-        # Load basic configuration
-        self._load_basic_config()
+        # Load all configuration
+        self._load_configuration()
         
-        self.logger.info("ConfigManager initialized")
+        self.logger.info("ConfigManager initialized with all methods")
+    
+    def _load_configuration(self):
+        """Load complete configuration from multiple sources."""
+        try:
+            # Load from YAML files if they exist
+            self._load_yaml_configs()
+            
+            # Load basic configuration that the system expects
+            self._load_basic_config()
+            
+            # Load cryptocurrency mappings
+            self._load_crypto_currencies()
+            
+        except Exception as e:
+            self.logger.error(f"Error loading configuration: {e}")
+            # Provide fallback configuration
+            self._load_fallback_config()
+    
+    def _load_yaml_configs(self):
+        """Load YAML configuration files."""
+        config_dir = Path("config")
+        
+        # API configuration
+        api_config_path = config_dir / "api_config.yaml"
+        if api_config_path.exists():
+            try:
+                with open(api_config_path, 'r') as f:
+                    api_config = yaml.safe_load(f)
+                    self._config_data.update(api_config)
+                    self.logger.info("Loaded api_config.yaml")
+            except Exception as e:
+                self.logger.warning(f"Could not load api_config.yaml: {e}")
+        
+        # Crypto mapping configuration  
+        crypto_config_path = config_dir / "crypto_mapping.yaml"
+        if crypto_config_path.exists():
+            try:
+                with open(crypto_config_path, 'r') as f:
+                    crypto_config = yaml.safe_load(f)
+                    if 'crypto_symbols' in crypto_config:
+                        # Convert to cryptocurrency objects
+                        for symbol, ticker in crypto_config['crypto_symbols'].items():
+                            self._cryptocurrencies.append(
+                                CryptoCurrency(symbol, symbol, ticker, True)
+                            )
+                    self.logger.info("Loaded crypto_mapping.yaml")
+            except Exception as e:
+                self.logger.warning(f"Could not load crypto_mapping.yaml: {e}")
     
     def _load_basic_config(self):
-        """Load basic configuration that tests expect."""
-        # Complete config that tests need
-        self._config_data = {
+        """Load basic configuration that the system expects."""
+        # Merge with existing config, don't overwrite
+        basic_config = {
             'application': {
-                'development_mode': True
+                'development_mode': True,
+                'name': 'Qortfolio V2',
+                'version': '1.0.0'
             },
             'deribit_api': {
-                'base_url': 'https://www.deribit.com/api/v2'
+                'base_url': 'https://www.deribit.com/api/v2',
+                'websocket_url': 'wss://www.deribit.com/ws/api/v2',
+                'test_websocket_url': 'wss://test.deribit.com/ws/api/v2',
+                'timeout': 30,
+                'max_retries': 3,
+                'rate_limit_delay': 0.1
+            },
+            'yfinance_api': {
+                'timeout': 15,
+                'max_retries': 3,
+                'backoff_factor': 2.0
+            },
+            'caching': {
+                'enabled': True,
+                'ttl': {
+                    'spot_prices': 60,
+                    'options_data': 300,
+                    'historical_data': 3600,
+                    'instruments': 1800,
+                    'default': 300
+                }
             },
             'options_config': {
                 'default_params': {
-                    'risk_free_rate': 0.05
+                    'risk_free_rate': 0.05,
+                    'dividend_yield': 0.0
                 }
+            },
+            'logging': {
+                'level': 'INFO',
+                'format': 'detailed'
             }
         }
         
-        # Basic cryptocurrencies that tests expect
+        # Deep merge with existing config
+        self._deep_merge_config(self._config_data, basic_config)
+    
+    def _load_crypto_currencies(self):
+        """Load cryptocurrency configurations."""
+        # If no cryptos loaded from YAML, provide defaults
+        if not self._cryptocurrencies:
+            self._cryptocurrencies = [
+                CryptoCurrency("BTC", "Bitcoin", "BTC-USD", True),
+                CryptoCurrency("ETH", "Ethereum", "ETH-USD", True),
+                CryptoCurrency("XRP", "Ripple", "XRP-USD", True),
+                CryptoCurrency("LTC", "Litecoin", "LTC-USD", True),
+                CryptoCurrency("BCH", "Bitcoin Cash", "BCH-USD", True),
+            ]
+    
+    def _load_fallback_config(self):
+        """Load minimal fallback configuration if all else fails."""
+        self._config_data = {
+            'application': {'development_mode': True},
+            'deribit_api': {'base_url': 'https://www.deribit.com/api/v2'},
+            'caching': {
+                'enabled': True,
+                'ttl': {'default': 300, 'spot_prices': 60, 'options_data': 300}
+            }
+        }
+        
         self._cryptocurrencies = [
             CryptoCurrency("BTC", "Bitcoin", "BTC-USD", True),
             CryptoCurrency("ETH", "Ethereum", "ETH-USD", True),
         ]
+    
+    def _deep_merge_config(self, target: Dict, source: Dict):
+        """Deep merge configuration dictionaries."""
+        for key, value in source.items():
+            if key in target and isinstance(target[key], dict) and isinstance(value, dict):
+                self._deep_merge_config(target[key], value)
+            elif key not in target:
+                target[key] = value
+    
+    # ==================== CRITICAL MISSING METHODS ====================
+    # These methods were missing and causing dashboard crashes
+    
+    def get_cache_ttl(self, cache_type: str) -> int:
+        """
+        Get cache TTL for specific type - CRITICAL METHOD.
+        
+        Args:
+            cache_type: Type of cache (e.g., 'spot_prices', 'options_data')
+        
+        Returns:
+            TTL in seconds
+        """
+        try:
+            cache_ttls = self.get('caching.ttl', {})
+            ttl = cache_ttls.get(cache_type, cache_ttls.get('default', 300))
+            self.logger.debug(f"Cache TTL for {cache_type}: {ttl} seconds")
+            return int(ttl)
+        except Exception as e:
+            self.logger.warning(f"Error getting cache TTL for {cache_type}: {e}")
+            return 300  # Default 5 minutes
+    
+    def get_deribit_currency(self, symbol: str) -> Optional[str]:
+        """
+        Get Deribit currency mapping for symbol - CRITICAL METHOD.
+        
+        Args:
+            symbol: Symbol to map (e.g., "BTC", "ETH")
+        
+        Returns:
+            Deribit currency or None
+        """
+        # For Deribit, the symbol IS the currency for options
+        supported_currencies = self.deribit_currencies
+        
+        if symbol.upper() in supported_currencies:
+            return symbol.upper()
+        
+        self.logger.warning(f"Symbol {symbol} not supported on Deribit")
+        return None
+    
+    @property
+    def deribit_currencies(self) -> List[str]:
+        """
+        Get list of supported Deribit currencies - CRITICAL PROPERTY.
+        
+        Returns:
+            List of supported currency symbols
+        """
+        # Deribit supports BTC and ETH options primarily
+        return ['BTC', 'ETH']
+    
+    def get_config_summary(self) -> Dict[str, Any]:
+        """
+        Get configuration summary for debugging - CRITICAL METHOD.
+        
+        Returns:
+            Summary of configuration state
+        """
+        try:
+            return {
+                'loaded_files': len(self._config_data),
+                'enabled_cryptos': len([c for c in self._cryptocurrencies if c.enabled]),
+                'total_cryptos': len(self._cryptocurrencies),
+                'development_mode': self.get('application.development_mode', True),
+                'cache_enabled': self.get('caching.enabled', True),
+                'deribit_currencies': self.deribit_currencies,
+                'config_keys': list(self._config_data.keys())
+            }
+        except Exception as e:
+            self.logger.error(f"Error generating config summary: {e}")
+            return {'error': str(e)}
+    
+    # ==================== CORE CONFIGURATION METHODS ====================
     
     def get(self, key: str, default: Any = None) -> Any:
         """
@@ -97,198 +288,114 @@ class ConfigManager:
             value = self._config_data
             
             for k in keys:
-                value = value[k]
+                if isinstance(value, dict) and k in value:
+                    value = value[k]
+                else:
+                    return default
             
             return value
-        except (KeyError, TypeError):
+            
+        except Exception as e:
+            self.logger.warning(f"Error accessing config key '{key}': {e}")
             return default
     
-    @property
-    def enabled_cryptocurrencies(self) -> List[CryptoCurrency]:
+    def set(self, key: str, value: Any):
+        """
+        Set configuration value by dot notation key.
+        
+        Args:
+            key: Configuration key
+            value: Value to set
+        """
+        try:
+            keys = key.split('.')
+            config = self._config_data
+            
+            # Navigate to the parent of the target key
+            for k in keys[:-1]:
+                if k not in config:
+                    config[k] = {}
+                config = config[k]
+            
+            # Set the value
+            config[keys[-1]] = value
+            
+        except Exception as e:
+            self.logger.error(f"Error setting config key '{key}': {e}")
+            raise ConfigurationError(f"Cannot set config key '{key}': {e}")
+    
+    def get_cryptocurrencies(self) -> List[CryptoCurrency]:
+        """Get list of configured cryptocurrencies."""
+        return self._cryptocurrencies
+    
+    def get_enabled_cryptocurrencies(self) -> List[CryptoCurrency]:
         """Get list of enabled cryptocurrencies."""
         return [crypto for crypto in self._cryptocurrencies if crypto.enabled]
     
-    @property 
-    def deribit_currencies(self) -> List[str]:
-        """Get list of Deribit-supported currencies."""
-        # Return BTC and ETH as tests expect
-        return ["BTC", "ETH"]
-    
     def get_yfinance_ticker(self, symbol: str) -> Optional[str]:
         """
-        Get yfinance ticker for a cryptocurrency symbol.
-        Tests expect this method to exist and be case-insensitive.
+        Get yfinance ticker for symbol.
         
         Args:
-            symbol: Cryptocurrency symbol (e.g., 'BTC' or 'btc')
+            symbol: Crypto symbol
             
         Returns:
-            yfinance ticker (e.g., 'BTC-USD') or None
+            yfinance ticker or None
         """
-        symbol_upper = symbol.upper()  # Make case-insensitive
         for crypto in self._cryptocurrencies:
-            if crypto.symbol.upper() == symbol_upper:
+            if crypto.symbol.upper() == symbol.upper():
                 return crypto.yfinance_ticker
         return None
     
-    def is_development_mode(self) -> bool:
+    def validate_configuration(self) -> bool:
         """
-        Check if application is in development mode.
-        Tests expect this method to exist.
+        Validate current configuration.
         
         Returns:
-            True if in development mode
+            True if configuration is valid
         """
-        return self.get('application.development_mode', True)
-    
-    def get_deribit_currency(self, symbol: str) -> Optional[str]:
-        """Get Deribit currency mapping for a symbol."""
-        symbol_upper = symbol.upper()
-        deribit_mapping = {
-            'BTC': 'BTC', 'ETH': 'ETH', 
-            'BITCOIN': 'BTC', 'ETHEREUM': 'ETH'
-        }
-        return deribit_mapping.get(symbol_upper)
-    
-    def get_config_summary(self) -> Dict[str, Any]:
-        """Get configuration summary that tests expect."""
-        return {
-            'loaded_files': 0,  # Will be updated when we load actual files
-            'enabled_cryptos': len(self.enabled_cryptocurrencies),
-            'development_mode': self.is_development_mode(),
-            'deribit_currencies': self.deribit_currencies
-        }
+        try:
+            # Check required configuration sections
+            required_sections = ['deribit_api', 'caching']
+            for section in required_sections:
+                if not self.get(section):
+                    self.logger.error(f"Missing required config section: {section}")
+                    return False
+            
+            # Check Deribit API URL
+            if not self.get('deribit_api.base_url'):
+                self.logger.error("Missing Deribit API base URL")
+                return False
+            
+            # Check cache configuration
+            if not isinstance(self.get('caching.ttl'), dict):
+                self.logger.warning("Cache TTL configuration is not a dictionary")
+            
+            self.logger.info("Configuration validation passed")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Configuration validation failed: {e}")
+            return False
 
-# Global configuration instance
+# ==================== GLOBAL CONFIGURATION INSTANCE ====================
+
+# Global configuration instance (singleton pattern)
 _config_instance: Optional[ConfigManager] = None
 
 def get_config() -> ConfigManager:
     """
-    Get the global configuration manager instance.
-    This is the function that tests expect to import.
+    Get global configuration instance (singleton).
     
     Returns:
         ConfigManager instance
     """
     global _config_instance
-    
     if _config_instance is None:
         _config_instance = ConfigManager()
-    
     return _config_instance
 
-def reset_config() -> None:
-    """
-    Reset the global configuration instance.
-    Used primarily for testing to ensure clean state.
-    """
+def reset_config():
+    """Reset global configuration instance (for testing)."""
     global _config_instance
     _config_instance = None
-
-# Add this method to ConfigManager class in src/core/config.py
-# Insert this method after the existing methods
-
-def get_deribit_currency(self, symbol: str) -> Optional[str]:
-    """
-    Get Deribit currency mapping for a symbol.
-    Data collectors expect this method to exist.
-    
-    Args:
-        symbol: Cryptocurrency symbol (e.g., 'BTC', 'ETH')
-        
-    Returns:
-        Deribit currency string or None if not supported
-    """
-    # Map symbols to Deribit currencies
-    symbol_upper = symbol.upper()
-    
-    deribit_mapping = {
-        'BTC': 'BTC',
-        'ETH': 'ETH',
-        'BITCOIN': 'BTC',
-        'ETHEREUM': 'ETH'
-    }
-    
-    return deribit_mapping.get(symbol_upper)
-
-def get_yfinance_ticker(self, symbol: str) -> Optional[str]:
-    """
-    Get yfinance ticker for a cryptocurrency symbol.
-    Tests expect this method to exist and be case-insensitive.
-    
-    Args:
-        symbol: Cryptocurrency symbol (e.g., 'BTC' or 'btc')
-        
-    Returns:
-        yfinance ticker (e.g., 'BTC-USD') or None
-    """
-    symbol_upper = symbol.upper()  # Make case-insensitive
-    for crypto in self._cryptocurrencies:
-        if crypto.symbol.upper() == symbol_upper:
-            return crypto.yfinance_ticker
-    return None
-
-def is_development_mode(self) -> bool:
-    """
-    Check if application is in development mode.
-    Tests expect this method to exist.
-    
-    Returns:
-        True if in development mode
-    """
-    return self.get('application.development_mode', True)
-
-# Export exactly what tests expect to import
-__all__ = [
-    'ConfigManager',
-    'CryptoCurrency', 
-    'ConfigurationError',
-    'get_config',
-    'reset_config'
-]
-
-
-
-if __name__ == "__main__":
-    # Test the complete interface
-    print("🔧 Testing Complete Configuration Interface Fix")
-    print("=" * 50)
-    
-    try:
-        # Test the imports that were failing
-        config = get_config()
-        
-        print("✅ ConfigManager can be imported and created")
-        print("✅ get_config() function works")
-        print("✅ CryptoCurrency class exists")
-        print("✅ ConfigurationError exception exists")
-        print("✅ reset_config() function exists")
-        
-        # Test basic functionality
-        summary = config.get_config_summary()
-        print(f"✅ Config summary: {summary}")
-        
-        cryptos = config.enabled_cryptocurrencies
-        print(f"✅ Found {len(cryptos)} enabled cryptocurrencies")
-        
-        # Test methods that tests expect
-        btc_ticker = config.get_yfinance_ticker('BTC')
-        print(f"✅ BTC yfinance ticker: {btc_ticker}")
-        
-        dev_mode = config.is_development_mode()
-        print(f"✅ Development mode: {dev_mode}")
-        
-        # Test dot notation
-        base_url = config.get('deribit_api.base_url')
-        print(f"✅ Deribit base URL: {base_url}")
-        
-        # Test reset function
-        reset_config()
-        print("✅ reset_config() works")
-        
-        print("\n🎉 Complete Configuration Fix - SUCCESS!")
-        print("All pytest import errors should now be resolved!")
-        
-    except Exception as e:
-        print(f"❌ Configuration fix failed: {e}")
-        raise
