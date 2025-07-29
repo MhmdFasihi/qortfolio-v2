@@ -78,7 +78,7 @@ class CryptoCollector(BaseDataCollector):
             interval = kwargs.get('interval', self.config.get('yfinance_api.defaults.interval', '1d'))
             start = kwargs.get('start')
             end = kwargs.get('end')
-            include_dividends = kwargs.get('include_dividends', False)
+            # include_dividends = kwargs.get('include_dividends', False)  # Removed - API issue
             
             self.logger.debug(f"Collecting data for {ticker_symbol}", extra={
                 "symbol": symbol,
@@ -99,7 +99,7 @@ class CryptoCollector(BaseDataCollector):
                     start=start,
                     end=end,
                     interval=interval,
-                    include_dividends=include_dividends,
+                    # include_dividends removed - caused API errors
                     auto_adjust=self.config.get('yfinance_api.defaults.auto_adjust', True),
                     back_adjust=self.config.get('yfinance_api.defaults.back_adjust', False)
                 )
@@ -108,7 +108,7 @@ class CryptoCollector(BaseDataCollector):
                 data = ticker.history(
                     period=period,
                     interval=interval,
-                    include_dividends=include_dividends,
+                    # include_dividends removed - caused API errors
                     auto_adjust=self.config.get('yfinance_api.defaults.auto_adjust', True),
                     back_adjust=self.config.get('yfinance_api.defaults.back_adjust', False)
                 )

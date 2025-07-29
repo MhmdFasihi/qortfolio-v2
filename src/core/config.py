@@ -141,6 +141,15 @@ class ConfigManager:
         """
         return self.get('application.development_mode', True)
     
+    def get_deribit_currency(self, symbol: str) -> Optional[str]:
+        """Get Deribit currency mapping for a symbol."""
+        symbol_upper = symbol.upper()
+        deribit_mapping = {
+            'BTC': 'BTC', 'ETH': 'ETH', 
+            'BITCOIN': 'BTC', 'ETHEREUM': 'ETH'
+        }
+        return deribit_mapping.get(symbol_upper)
+    
     def get_config_summary(self) -> Dict[str, Any]:
         """Get configuration summary that tests expect."""
         return {
@@ -176,6 +185,59 @@ def reset_config() -> None:
     global _config_instance
     _config_instance = None
 
+# Add this method to ConfigManager class in src/core/config.py
+# Insert this method after the existing methods
+
+def get_deribit_currency(self, symbol: str) -> Optional[str]:
+    """
+    Get Deribit currency mapping for a symbol.
+    Data collectors expect this method to exist.
+    
+    Args:
+        symbol: Cryptocurrency symbol (e.g., 'BTC', 'ETH')
+        
+    Returns:
+        Deribit currency string or None if not supported
+    """
+    # Map symbols to Deribit currencies
+    symbol_upper = symbol.upper()
+    
+    deribit_mapping = {
+        'BTC': 'BTC',
+        'ETH': 'ETH',
+        'BITCOIN': 'BTC',
+        'ETHEREUM': 'ETH'
+    }
+    
+    return deribit_mapping.get(symbol_upper)
+
+def get_yfinance_ticker(self, symbol: str) -> Optional[str]:
+    """
+    Get yfinance ticker for a cryptocurrency symbol.
+    Tests expect this method to exist and be case-insensitive.
+    
+    Args:
+        symbol: Cryptocurrency symbol (e.g., 'BTC' or 'btc')
+        
+    Returns:
+        yfinance ticker (e.g., 'BTC-USD') or None
+    """
+    symbol_upper = symbol.upper()  # Make case-insensitive
+    for crypto in self._cryptocurrencies:
+        if crypto.symbol.upper() == symbol_upper:
+            return crypto.yfinance_ticker
+    return None
+
+def is_development_mode(self) -> bool:
+    """
+    Check if application is in development mode.
+    Tests expect this method to exist.
+    
+    Returns:
+        True if in development mode
+    """
+    return self.get('application.development_mode', True)
+
 # Export exactly what tests expect to import
 __all__ = [
     'ConfigManager',
@@ -184,6 +246,8 @@ __all__ = [
     'get_config',
     'reset_config'
 ]
+
+
 
 if __name__ == "__main__":
     # Test the complete interface

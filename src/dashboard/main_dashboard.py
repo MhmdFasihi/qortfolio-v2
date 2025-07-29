@@ -886,191 +886,32 @@ class QortfolioDashboard:
                 })
             
             stress_df = pd.DataFrame(stress_results)
-            
+        except Exception as e:
+            st.error(f"Dashboard error: {e}")   
             # Color code by P&L
-            def highlight_pnl(val):
-                if isinstance(val, (int, float)):
-                    if val < -100:
-                        return 'background-color: #ffcccc'
-                    elif val > 100:
-                        return 'background-color: #ccffcc'
-                return ''
-            
-            styled_df = stress_df.style.applymap(highlight_pnl, subset=['Total P&L'])
-            st.dataframe(styled_df, use_container_width=True)
-            
-            # Risk limits and alerts
-            st.subheader("🚨 Risk Limits & Alerts")
-            
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                max_delta_limit = st.number_input("Max Delta Exposure ($)", value=10000, step=1000)
-                max_theta_limit = st.number_input("Max Daily Theta ($)", value=500, step=50)
-            
-            with col2:
-                max_gamma_limit = st.number_input("Max Gamma Risk ($)", value=2000, step=500)
-                
-                if st.button("Check Risk Limits"):
-                    violations = []
-                    
-                    if delta_exposure > max_delta_limit:
-                        violations.append(f"Delta exposure ${delta_exposure:.0f} exceeds limit ${max_delta_limit}")
-                    
-                    if daily_theta > max_theta_limit:
-                        violations.append(f"Daily theta ${daily_theta:.0f} exceeds limit ${max_theta_limit}")
-                    
-                    if risk_metrics.gamma_risk > max_gamma_limit:
-                        violations.append(f"Gamma risk ${risk_metrics.gamma_risk:.0f} exceeds limit ${max_gamma_limit}")
-                    
-                    if violations:
-                        for violation in violations:
-                            st.error(f"⚠️ {violation}")
-                    else:
-                        st.success("✅ All risk limits within bounds")
-        
-        except Exception as e:
-            st.error(f"Risk analysis failed: {e}")
-    
-    def system_status_page(self):
-        """System status and diagnostics page."""
-        st.header("🔧 System Status")
-        
-        # Configuration status
-        st.subheader("⚙️ Configuration")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.info(f"**Enabled Cryptocurrencies:** {len(self.config.enabled_cryptocurrencies)}")
-            
-            enabled_list = [crypto.symbol for crypto in self.config.enabled_cryptocurrencies]
-            st.write(", ".join(enabled_list))
-        
-        with col2:
-            st.info(f"**Deribit Currencies:** {len(self.config.deribit_currencies)}")
-            st.write(", ".join(self.config.deribit_currencies))
-        
-        # Data collection status
-        st.subheader("📊 Data Collection Status")
+    def highlight_pnl(val):
+        # Improved P&L highlighting with better readability.
+        # FIXED: Better color scheme and error handling.
+        if pd.isna(val):
+            return 'background-color: #f8f9fa; color: #6c757d;'
         
         try:
-            stats = self.data_manager.get_collector_stats()
-            
-            for collector_name, collector_stats in stats.items():
-                st.markdown(f"**{collector_name.replace('_', ' ').title()}:**")
-                
-                col1, col2, col3, col4 = st.columns(4)
-                
-                with col1:
-                    st.metric("Total Requests", collector_stats.get('total_requests', 0))
-                
-                with col2:
-                    st.metric("Successful", collector_stats.get('successful_requests', 0))
-                
-                with col3:
-                    success_rate = collector_stats.get('success_rate', 0)
-                    st.metric("Success Rate", f"{success_rate:.1%}")
-                
-                with col4:
-                    avg_time = collector_stats.get('average_response_time', 0)
-                    st.metric("Avg Response", f"{avg_time:.2f}s")
-        
-        except Exception as e:
-            st.error(f"Failed to get collector stats: {e}")
-        
-        # System health check
-        st.subheader("🩺 System Health Check")
-        
-        if st.button("🔍 Run Health Check"):
-            with st.spinner("Running system health check..."):
-                health_results = []
-                
-                # Test configuration
-                try:
-                    config_summary = self.config.get_config_summary()
-                    health_results.append(("Configuration", "✅ OK", f"Loaded {len(config_summary['loaded_files'])} files"))
-                except Exception as e:
-                    health_results.append(("Configuration", "❌ Error", str(e)))
-                
-                # Test data collection
-                try:
-                    test_price = get_spot_price("BTC")
-                    if test_price:
-                        health_results.append(("Crypto Data", "✅ OK", f"BTC: ${test_price:,.2f}"))
-                    else:
-                        health_results.append(("Crypto Data", "⚠️ Warning", "No price data"))
-                except Exception as e:
-                    health_results.append(("Crypto Data", "❌ Error", str(e)))
-                
-                # Test options data
-                try:
-                    if self.config.deribit_currencies:
-                        market_data = collect_market_data(
-                            symbols=[self.config.deribit_currencies[0]],
-                            include_options=True,
-                            include_historical=False
-                        )
-                        
-                        if market_data.options_data is not None and not market_data.options_data.empty:
-                            health_results.append(("Options Data", "✅ OK", f"{len(market_data.options_data)} options"))
-                        else:
-                            health_results.append(("Options Data", "⚠️ Warning", "No options data"))
-                    else:
-                        health_results.append(("Options Data", "⚠️ Warning", "No supported currencies"))
-                        
-                except Exception as e:
-                    health_results.append(("Options Data", "❌ Error", str(e)))
-                
-                # Test financial calculations
-                try:
-                    test_price = price_option(50000, 52000, 30/365.25, 0.8, 'call')
-                    health_results.append(("Financial Calcs", "✅ OK", f"Test option: ${test_price:.2f}"))
-                except Exception as e:
-                    health_results.append(("Financial Calcs", "❌ Error", str(e)))
-                
-                # Display results
-                for component, status, details in health_results:
-                    col1, col2, col3 = st.columns([2, 1, 3])
-                    
-                    with col1:
-                        st.write(f"**{component}**")
-                    
-                    with col2:
-                        st.write(status)
-                    
-                    with col3:
-                        st.write(details)
-        
-        # Performance metrics
-        st.subheader("⚡ Performance Metrics")
-        
-        # Portfolio size
-        st.metric("Portfolio Positions", len(st.session_state.portfolio))
-        
-        # Cache statistics
-        try:
-            cache_stats = self.data_manager.get_cache_stats()
-            
-            if cache_stats and cache_stats.get('cache_enabled', False):
-                col1, col2, col3 = st.columns(3)
-                
-                with col1:
-                    st.metric("Cache Entries", cache_stats.get('total_items', 0))
-                
-                with col2:
-                    st.metric("Active Entries", cache_stats.get('active_items', 0))
-                
-                with col3:
-                    if st.button("Clear Cache"):
-                        self.data_manager.clear_cache()
-                        st.success("Cache cleared!")
+            # Handle both string and numeric values
+            if isinstance(val, str):
+                # Remove currency symbols and commas
+                clean_val = val.replace('$', '').replace(',', '')
+                numeric_val = float(clean_val)
             else:
-                st.info("Caching is disabled")
-                
-        except Exception as e:
-            st.error(f"Failed to get cache stats: {e}")
-
+                numeric_val = float(val)
+            
+            if numeric_val > 0:
+                return 'background-color: #d4edda; color: #155724; font-weight: bold; border: 1px solid #c3e6cb;'
+            elif numeric_val < 0:
+                return 'background-color: #f8d7da; color: #721c24; font-weight: bold; border: 1px solid #f5c6cb;'
+            else:
+                return 'background-color: #e2e3e5; color: #383d41; font-weight: bold;'
+        except (ValueError, TypeError):
+            return 'background-color: #f8f9fa; color: #6c757d;'
 
 def main():
     """Main entry point for the dashboard."""
@@ -1080,7 +921,6 @@ def main():
     except Exception as e:
         st.error(f"Dashboard initialization failed: {e}")
         st.error("Please ensure all Qortfolio V2 modules are properly installed and configured.")
-
 
 if __name__ == "__main__":
     main()
