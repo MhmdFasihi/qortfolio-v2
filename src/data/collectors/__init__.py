@@ -4,26 +4,13 @@
 # Contact for commercial licensing: mhmd.fasihi@gmail.com
 
 """
-Data Collectors Module for Qortfolio V2
-
-Contains specific implementations for different data sources:
-- BaseDataCollector: Abstract base class with common functionality
-- CryptoCollector: yfinance integration for cryptocurrency prices
-- DeribitCollector: Deribit API integration for options data
-- DataManager: Unified coordinator for all data collection
+Data collectors package initialization - Clean imports only.
 """
 
-from .base_collector import BaseDataCollector, CollectionResult, DataCollectionError
-from .crypto_collector import CryptoCollector
-from .deribit_collector import DeribitCollector
-from .data_manager import DataManager, MarketData
-
-__all__ = [
-    'BaseDataCollector',
-    'CryptoCollector', 
-    'DeribitCollector',
-    'DataManager',
-    'CollectionResult',
-    'DataCollectionError',
-    'MarketData'
-]
+# Only import what actually exists
+try:
+    from .deribit_collector import DeribitCollector, get_deribit_collector
+    __all__ = ['DeribitCollector', 'get_deribit_collector']
+except ImportError:
+    # If import fails, provide empty module to prevent crashes
+    __all__ = []

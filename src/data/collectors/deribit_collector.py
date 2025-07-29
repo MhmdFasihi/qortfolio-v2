@@ -8,7 +8,7 @@ Fixed Deribit API Integration - Real-time Websocket Implementation
 Location: src/data/collectors/deribit_collector.py
 
 This fixes the 400 API errors by using proper websocket implementation
-based on the original qortfolio repository.
+based on the original qortfolio repository and your websocket example.
 """
 
 import asyncio
@@ -24,9 +24,9 @@ from dataclasses import dataclass
 import ssl
 import requests
 
-from ...core.config import get_config
-from ...core.logging import get_logger
-from ...core.utils.time_utils import calculate_time_to_maturity
+from core.config import get_config
+from core.logging import get_logger
+from core.utils.time_utils import calculate_time_to_maturity
 
 @dataclass
 class OptionData:
