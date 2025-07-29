@@ -588,33 +588,226 @@ def create_sample_options_data() -> pd.DataFrame:
     return pd.DataFrame(data)
 
 
+def analyze_options_volatility(options_data: pd.DataFrame, 
+                             spot_price: float,
+                             reference_date: Optional[datetime] = None) -> VolatilitySurfaceData:
+    """
+    Convenience function for volatility analysis - expected by dashboard.
+    
+    Args:
+        options_data: DataFrame with options market data
+        spot_price: Current spot price  
+        reference_date: Reference date (default: now)
+        
+    Returns:
+        VolatilitySurfaceData object
+    """
+    analyzer = VolatilitySurfaceAnalyzer()
+    return analyzer.build_volatility_surface(options_data, spot_price, reference_date)
+
+def create_volatility_surface_3d(surface_data: VolatilitySurfaceData,
+                                title: str = "Implied Volatility Surface") -> go.Figure:
+    """
+    Create 3D volatility surface plot for dashboard.
+    
+    Args:
+        surface_data: VolatilitySurfaceData object
+        title: Plot title
+        
+    Returns:
+        Plotly 3D surface figure
+    """
+    if not surface_data.surface_points:
+        # Return empty figure
+        fig = go.Figure()
+        fig.add_annotation(
+            text="No data available for volatility surface",
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, showarrow=False
+        )
+        return fig
+    
+    # Extract data for plotting
+    strikes = [p.strike for p in surface_data.surface_points]
+    times = [p.time_to_expiry * 365 for p in surface_data.surface_points]  # Convert to days
+    vols = [p.implied_vol * 100 for p in surface_data.surface_points]  # Convert to percentage
+    
+    # Create unique sorted arrays
+    unique_strikes = sorted(list(set(strikes)))
+    unique_times = sorted(list(set(times)))
+    
+    # Create meshgrid
+    strike_grid, time_grid = np.meshgrid(unique_strikes, unique_times)
+    vol_grid = np.zeros_like(strike_grid)
+    
+    # Fill the grid with volatility data
+    for i, time_val in enumerate(unique_times):
+        for j, strike_val in enumerate(unique_strikes):
+            # Find matching data point
+            matching_points = [
+                p for p in surface_data.surface_points 
+                if abs(p.strike - strike_val) < 1e-6 and abs(p.time_to_expiry * 365 - time_val) < 1e-6
+            ]
+            if matching_points:
+                vol_grid[i, j] = matching_points[0].implied_vol * 100
+            else:
+                # Interpolate or use nearest neighbor
+                vol_grid[i, j] = np.nan
+    
+    # Create 3D surface plot
+    fig = go.Figure(data=[
+        go.Surface(
+            x=strike_grid,
+            y=time_grid,
+            z=vol_grid,
+            colorscale='Viridis',
+            colorbar=dict(title="Implied Volatility (%)"),
+            hovertemplate="Strike: %{x}<br>Days to Expiry: %{y}<br>IV: %{z:.1f}%<extra></extra>"
+        )
+    ])
+    
+    fig.update_layout(
+        title=title,
+        scene=dict(
+            xaxis_title="Strike Price",
+            yaxis_title="Days to Expiry",
+            zaxis_title="Implied Volatility (%)",
+            camera=dict(eye=dict(x=1.87, y=0.88, z=-0.64))
+        ),
+        height=600
+    )
+    
+    return fig
+
+def analyze_volatility_term_structure(surface_data: VolatilitySurfaceData,
+                                    moneyness_range: Tuple[float, float] = (0.95, 1.05)) -> Dict[str, Any]:
+    """
+    Analyze volatility term structure (volatility vs time to expiry).
+    
+    Args:
+        surface_data: VolatilitySurfaceData object
+        moneyness_range: Range of moneyness to include (default: 95%-105%)
+        
+    Returns:
+        Dictionary with term structure analysis
+    """
+    if not surface_data.surface_points:
+        return {"error": "No surface data available"}
+    
+    # Filter points near ATM
+    atm_points = [
+        p for p in surface_data.surface_points
+        if moneyness_range[0] <= p.moneyness <= moneyness_range[1]
+    ]
+    
+    if not atm_points:
+        return {"error": "No ATM points found in specified moneyness range"}
+    
+    # Group by time to expiry and calculate average volatility
+    time_vol_map = {}
+    for point in atm_points:
+        days_to_expiry = point.time_to_expiry * 365
+        if days_to_expiry not in time_vol_map:
+            time_vol_map[days_to_expiry] = []
+        time_vol_map[days_to_expiry].append(point.implied_vol)
+    
+    # Calculate average volatility for each time bucket
+    term_structure = []
+    for days, vols in time_vol_map.items():
+        term_structure.append({
+            'days_to_expiry': days,
+            'average_iv': np.mean(vols),
+            'iv_std': np.std(vols),
+            'data_points': len(vols)
+        })
+    
+    # Sort by time to expiry
+    term_structure.sort(key=lambda x: x['days_to_expiry'])
+    
+    return {
+        'term_structure': term_structure,
+        'analysis_period': f"{min(time_vol_map.keys()):.0f} to {max(time_vol_map.keys()):.0f} days",
+        'moneyness_range': moneyness_range,
+        'total_points': len(atm_points)
+    }
+
+def calculate_volatility_metrics(surface_data: VolatilitySurfaceData) -> Dict[str, float]:
+    """
+    Calculate comprehensive volatility metrics.
+    
+    Args:
+        surface_data: VolatilitySurfaceData object
+        
+    Returns:
+        Dictionary with volatility metrics
+    """
+    if not surface_data.surface_points:
+        return {}
+    
+    vols = [p.implied_vol for p in surface_data.surface_points]
+    volumes = [p.volume for p in surface_data.surface_points]
+    
+    # Basic statistics
+    metrics = {
+        'mean_iv': np.mean(vols),
+        'median_iv': np.median(vols),
+        'std_iv': np.std(vols),
+        'min_iv': np.min(vols),
+        'max_iv': np.max(vols),
+        'total_volume': sum(volumes),
+        'surface_points': len(surface_data.surface_points)
+    }
+    
+    # Volume-weighted average volatility
+    if sum(volumes) > 0:
+        metrics['volume_weighted_iv'] = np.average(vols, weights=volumes)
+    else:
+        metrics['volume_weighted_iv'] = metrics['mean_iv']
+    
+    # Percentiles
+    metrics['iv_25th_percentile'] = np.percentile(vols, 25)
+    metrics['iv_75th_percentile'] = np.percentile(vols, 75)
+    
+    return metrics
+
+# Update __all__ to include new functions
+__all__ = [
+    'VolatilitySurfaceAnalyzer',
+    'VolatilitySurfaceData', 
+    'VolatilitySurfacePoint',
+    'analyze_options_volatility',      # Dashboard expects this
+    'create_sample_options_data',
+    'create_volatility_surface_3d',    # Dashboard visualization
+    'analyze_volatility_term_structure',
+    'calculate_volatility_metrics'
+]
+
+# Test the volatility surface functions
 if __name__ == "__main__":
-    # Test the volatility surface analyzer
-    print("🧪 Testing Volatility Surface Analyzer")
+    print("🔧 Testing Volatility Surface Function Fix")
     print("=" * 45)
     
-    analyzer = VolatilitySurfaceAnalyzer()
-    
-    # Create sample data
-    print("📊 Creating sample options data...")
-    options_df = create_sample_options_data()
-    print(f"✅ Created {len(options_df)} option data points")
-    
-    # Build volatility surface
-    print("\n🏗️ Building volatility surface...")
-    surface_data = analyzer.build_volatility_surface(options_df, 50000.0)
-    print(f"✅ Surface built with {len(surface_data.surface_points)} points")
-    print(f"📈 ATM Volatility: {surface_data.atm_volatility:.1%}")
-    print(f"📊 Total Volume: {surface_data.total_volume:,.0f}")
-    
-    # Analyze volatility skew
-    print("\n📈 Analyzing volatility skew...")
-    skew_30d = analyzer.analyze_volatility_skew(surface_data, 30)
-    if "error" not in skew_30d:
-        print(f"✅ 30D Skew analysis: {skew_30d['data_points']} points")
-        print(f"📊 ATM Vol: {skew_30d['atm_volatility']:.1%}")
-        print(f"📈 Skew Slope: {skew_30d['skew_slope']:.4f}")
-    else:
-        print(f"⚠️ 30D Skew analysis failed: {skew_30d['error']}")
-    
-    print("\n✅ Volatility Surface Analyzer test completed!")
+    try:
+        # Test analyze_options_volatility function
+        options_df = create_sample_options_data()
+        surface_data = analyze_options_volatility(options_df, 50000.0)
+        
+        print(f"✅ analyze_options_volatility works: {len(surface_data.surface_points)} points")
+        
+        # Test 3D surface creation
+        fig = create_volatility_surface_3d(surface_data)
+        print("✅ 3D surface plot creation works")
+        
+        # Test term structure analysis
+        term_analysis = analyze_volatility_term_structure(surface_data)
+        if "error" not in term_analysis:
+            print(f"✅ Term structure analysis works: {len(term_analysis['term_structure'])} tenors")
+        
+        # Test volatility metrics
+        metrics = calculate_volatility_metrics(surface_data)
+        print(f"✅ Volatility metrics: Mean IV = {metrics['mean_iv']:.1%}")
+        
+        print("\n🎉 All volatility surface functions working!")
+        
+    except Exception as e:
+        print(f"❌ Volatility surface function test failed: {e}")
