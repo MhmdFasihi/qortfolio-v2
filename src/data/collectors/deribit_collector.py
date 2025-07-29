@@ -8,7 +8,7 @@ Fixed Deribit API Integration - Real-time Websocket Implementation
 Location: src/data/collectors/deribit_collector.py
 
 This fixes the 400 API errors by using proper websocket implementation
-based on the original qortfolio repository and your websocket example.
+based on the original qortfolio repository.
 """
 
 import asyncio
