@@ -332,6 +332,11 @@ class ConfigManager:
         """Get list of enabled cryptocurrencies."""
         return [crypto for crypto in self._cryptocurrencies if crypto.enabled]
     
+    @property
+    def enabled_cryptocurrencies(self) -> List[CryptoCurrency]:
+        """Property version of enabled cryptocurrencies - CRITICAL for dashboard."""
+        return self.get_enabled_cryptocurrencies()
+    
     def get_yfinance_ticker(self, symbol: str) -> Optional[str]:
         """
         Get yfinance ticker for symbol.
