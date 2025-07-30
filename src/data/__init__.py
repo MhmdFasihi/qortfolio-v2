@@ -16,13 +16,32 @@ def get_data_manager():
     """Get data manager instance - dashboard compatibility function."""
     return get_deribit_collector()
 
-def collect_market_data(symbol: str = "BTC"):
-    """Collect market data for symbol - dashboard compatibility function."""
+def collect_market_data(symbol: str = "BTC", symbols: list = None, **kwargs):
+    """
+    Collect market data for symbol(s) - dashboard compatibility function.
+    
+    Args:
+        symbol: Single symbol (legacy parameter)
+        symbols: List of symbols (new parameter for dashboard compatibility)
+        **kwargs: Additional parameters
+    """
     try:
         collector = get_deribit_collector()
+        
+        # Handle both single symbol and multiple symbols
+        if symbols is not None:
+            # Dashboard is passing symbols as a list
+            if isinstance(symbols, list) and len(symbols) > 0:
+                symbol = symbols[0]  # Use first symbol for now
+            elif isinstance(symbols, str):
+                symbol = symbols
+        
         return collector.get_options_data(symbol)
     except Exception as e:
         import pandas as pd
+        from core.logging import get_logger
+        logger = get_logger("data_collection")
+        logger.error(f"Market data collection failed: {e}")
         # Return empty DataFrame on error to prevent crashes
         return pd.DataFrame()
 
