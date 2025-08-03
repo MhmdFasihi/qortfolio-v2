@@ -345,26 +345,46 @@ class RealTimeDataManager:
         except:
             return 95000.0 if symbol == "BTC" else 3200.0
     
-    def get_historical_volatility(self, symbol: str, days: int = 30) -> float:
-        """Calculate historical volatility."""
+    def get_historical_volatility(self, symbol: str, period: str = "30d") -> float:
+        """Calculate historical volatility with proper period support."""
         try:
             ticker_symbol = f"{symbol}-USD"
             ticker = yf.Ticker(ticker_symbol)
-            hist = ticker.history(period=f"{days}d")
             
-            if len(hist) < 10:
+            # Map period strings to yfinance periods
+            period_map = {
+                "7d": "7d",    # Weekly
+                "30d": "1mo",  # Monthly  
+                "90d": "3mo",  # Quarterly
+                "365d": "1y"   # Annual
+            }
+            
+            yf_period = period_map.get(period, "1mo")
+            hist = ticker.history(period=yf_period)
+            
+            if len(hist) < 5:
+                # Fallback for insufficient data
                 return 0.8
             
+            # Calculate returns
             returns = hist['Close'].pct_change().dropna()
+            
+            if len(returns) < 3:
+                return 0.8
+            
+            # Annualized volatility
             volatility = returns.std() * np.sqrt(365)
-            return max(0.3, min(2.0, volatility))
-        except:
+            
+            # Ensure reasonable bounds
+            return max(0.1, min(3.0, volatility))
+        except Exception as e:
+            print(f"Volatility calculation error for {symbol}: {e}")
             return 0.8
     
     def get_options_data(self, symbol: str) -> pd.DataFrame:
-        """Generate realistic options data for BTC/ETH."""
+        """Generate realistic options data for BTC/ETH with improved volatility calculation."""
         spot_price = self.get_current_price(symbol)
-        hv = self.get_historical_volatility(symbol)
+        hv = self.get_historical_volatility(symbol, "30d")  # Use proper method call
         
         expiry_dates = []
         base_date = datetime.now()
@@ -541,7 +561,7 @@ def render_header():
         """, unsafe_allow_html=True)
     
     with col3:
-        btc_vol = data_manager.get_historical_volatility("BTC") * 100
+        btc_vol = data_manager.get_historical_volatility("BTC", "30d") * 100
         st.markdown(f"""
         <div class="metric-card">
             <h4 style="margin: 0 0 0.5rem 0; color: #B8B8B8;">BTC Volatility</h4>
@@ -559,7 +579,7 @@ def render_header():
         """, unsafe_allow_html=True)
 
 def market_overview_page():
-    """Market Overview with dark theme."""
+    """Market Overview with fixed ETH chart and dark theme."""
     st.markdown('<div class="page-content">', unsafe_allow_html=True)
     
     st.header("📈 Market Overview")
@@ -573,21 +593,26 @@ def market_overview_page():
             default=["BTC", "ETH"]
         )
     with col2:
-        auto_refresh = st.checkbox("Auto Refresh (30s)", value=True)
+        auto_refresh = st.checkbox("Auto Refresh (30s)", value=False)
     
     if auto_refresh:
         time.sleep(1)
         st.rerun()
     
-    # Price charts
+    # Price charts with fixed ETH rendering
     st.subheader("💰 Price Charts")
     
     fig = make_subplots(
         rows=2, cols=2,
-        subplot_titles=("BTC Price (24h)", "ETH Price (24h)", "BTC vs ETH Correlation", "Volume Analysis")
+        subplot_titles=("BTC Price (24h)", "ETH Price (24h)", "BTC vs ETH Correlation", "Volume Analysis"),
+        specs=[[{"secondary_y": False}, {"secondary_y": False}],
+               [{"secondary_y": False}, {"secondary_y": False}]]
     )
     
     colors = ['#8B5CF6', '#A78BFA']
+    
+    # Load data for each selected asset
+    chart_data = {}
     
     for i, asset in enumerate(["BTC", "ETH"]):
         if asset in selected_assets:
@@ -596,21 +621,105 @@ def market_overview_page():
                 hist = ticker.history(period="1d", interval="5m")
                 
                 if not hist.empty:
-                    row = 1
-                    col = 1 if asset == "BTC" else 2
+                    chart_data[asset] = {
+                        'hist': hist,
+                        'color': colors[i]
+                    }
+                else:
+                    st.warning(f"No data available for {asset}")
+            except Exception as e:
+                st.error(f"Could not load {asset} data: {str(e)}")
+    
+    # Plot BTC if available
+    if "BTC" in chart_data:
+        btc_data = chart_data["BTC"]
+        fig.add_trace(
+            go.Scatter(
+                x=btc_data['hist'].index,
+                y=btc_data['hist']['Close'],
+                name="BTC Price",
+                line=dict(color=btc_data['color'], width=3),
+                fill='tonexty'
+            ),
+            row=1, col=1
+        )
+    
+    # Plot ETH if available - Fixed rendering
+    if "ETH" in chart_data:
+        eth_data = chart_data["ETH"]
+        fig.add_trace(
+            go.Scatter(
+                x=eth_data['hist'].index,
+                y=eth_data['hist']['Close'],
+                name="ETH Price",
+                line=dict(color=eth_data['color'], width=3),
+                fill='tonexty'
+            ),
+            row=1, col=2
+        )
+    
+    # Correlation analysis - Fixed to handle missing data
+    if "BTC" in chart_data and "ETH" in chart_data:
+        try:
+            btc_hist = chart_data["BTC"]['hist']
+            eth_hist = chart_data["ETH"]['hist']
+            
+            # Calculate returns for correlation
+            btc_returns = btc_hist['Close'].pct_change().dropna()
+            eth_returns = eth_hist['Close'].pct_change().dropna()
+            
+            # Align data by matching timestamps
+            if len(btc_returns) > 0 and len(eth_returns) > 0:
+                # Get common time index
+                common_index = btc_returns.index.intersection(eth_returns.index)
+                
+                if len(common_index) > 10:  # Need sufficient data points
+                    btc_aligned = btc_returns.loc[common_index]
+                    eth_aligned = eth_returns.loc[common_index]
                     
                     fig.add_trace(
                         go.Scatter(
-                            x=hist.index,
-                            y=hist['Close'],
-                            name=f"{asset} Price",
-                            line=dict(color=colors[i], width=3),
-                            fill='tonexty' if i > 0 else None
+                            x=btc_aligned * 100,  # Convert to percentage
+                            y=eth_aligned * 100,  # Convert to percentage
+                            mode='markers',
+                            name='BTC vs ETH Returns',
+                            marker=dict(
+                                color='rgba(139, 92, 246, 0.6)', 
+                                size=8,
+                                opacity=0.7
+                            )
                         ),
-                        row=row, col=col
+                        row=2, col=1
                     )
-            except:
-                st.warning(f"Could not load {asset} data")
+                else:
+                    # Add placeholder for insufficient data
+                    fig.add_trace(
+                        go.Scatter(
+                            x=[0],
+                            y=[0],
+                            mode='text',
+                            text=['Insufficient data for correlation'],
+                            textfont=dict(color='#E8E8E8', size=14),
+                            showlegend=False
+                        ),
+                        row=2, col=1
+                    )
+        except Exception as e:
+            st.warning(f"Could not calculate correlation: {str(e)}")
+    
+    # Volume analysis - Fixed
+    if "BTC" in chart_data:
+        btc_volume = chart_data["BTC"]['hist']['Volume']
+        if not btc_volume.empty:
+            fig.add_trace(
+                go.Bar(
+                    x=btc_volume.index,
+                    y=btc_volume,
+                    name='BTC Volume',
+                    marker=dict(color='rgba(139, 92, 246, 0.7)')
+                ),
+                row=2, col=2
+            )
     
     # Apply dark theme
     fig.update_layout(get_dark_theme_layout())
@@ -620,12 +729,59 @@ def market_overview_page():
         title_text="Real-Time Market Analysis"
     )
     
+    # Update subplot titles color
+    fig.update_annotations(font_color='#E8E8E8')
+    
     st.plotly_chart(fig, use_container_width=True)
+    
+    # Market statistics - Fixed to handle data availability
+    st.subheader("📊 Market Statistics")
+    
+    stats_data = []
+    for asset in ["BTC", "ETH"]:
+        try:
+            current_price = data_manager.get_current_price(asset)
+            volatility = data_manager.get_historical_volatility(asset, "30d") * 100
+            
+            # Get 24h change
+            if asset in chart_data:
+                hist = chart_data[asset]['hist']
+                if len(hist) >= 2:
+                    change_24h = (hist['Close'].iloc[-1] - hist['Close'].iloc[0]) / hist['Close'].iloc[0] * 100
+                    volume_24h = hist['Volume'].sum()
+                else:
+                    change_24h = 0
+                    volume_24h = 0
+            else:
+                change_24h = 0
+                volume_24h = 0
+            
+            stats_data.append({
+                'Asset': asset,
+                'Price': f"${current_price:,.2f}",
+                '24h Change': f"{change_24h:+.2f}%",
+                'Volatility (30d)': f"{volatility:.1f}%",
+                'Volume 24h': f"{volume_24h/1e9:.1f}B" if volume_24h > 0 else "N/A"
+            })
+        except Exception as e:
+            stats_data.append({
+                'Asset': asset,
+                'Price': "Loading...",
+                '24h Change': "Loading...",
+                'Volatility (30d)': "Loading...",
+                'Volume 24h': "Loading..."
+            })
+    
+    st.dataframe(
+        pd.DataFrame(stats_data), 
+        use_container_width=True,
+        hide_index=True
+    )
     
     st.markdown('</div>', unsafe_allow_html=True)
 
 def options_chain_page():
-    """Options Chain Analysis - Deribit Style Layout with Black-Scholes Values."""
+    """Options Chain Analysis - Fixed Deribit Style Layout with proper Black-Scholes Values."""
     st.markdown('<div class="page-content">', unsafe_allow_html=True)
     
     st.header("⛓️ Options Chain Analysis")
@@ -715,7 +871,13 @@ def options_chain_page():
             """, unsafe_allow_html=True)
         
         with header_col3:
-            avg_iv = options_df['iv'].mean() * 100
+            # Fix ATM IV calculation
+            atm_options = options_df[
+                (options_df['moneyness'] >= 0.98) & 
+                (options_df['moneyness'] <= 1.02)
+            ]
+            avg_iv = atm_options['iv'].mean() * 100 if not atm_options.empty else 45.0
+            
             st.markdown(f"""
             <div style="background: linear-gradient(135deg, #3A3A42 0%, #5B21B6 100%); 
                         padding: 1rem; border-radius: 8px; text-align: center;">
@@ -740,110 +902,70 @@ def options_chain_page():
             st.markdown('</div>', unsafe_allow_html=True)
             return
         
-        # Create Deribit-style layout
+        # Create proper Deribit-style options chain table
         st.subheader(f"📊 {selected_asset} Options Chain - {selected_expiry}")
         
-        # Header row
-        st.markdown("""
-        <div style="background: linear-gradient(135deg, #4A4A5A 0%, #6B46C1 100%); 
-                    padding: 0.8rem; border-radius: 8px 8px 0 0; 
-                    border: 1px solid rgba(232, 232, 232, 0.1);">
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 100px 1fr 1fr 1fr 1fr 1fr 1fr; 
-                        gap: 8px; text-align: center; color: #E8E8E8; font-weight: bold; font-size: 0.9rem;">
-                <div>Open</div>
-                <div>Delta</div>
-                <div>IV</div>
-                <div>Bid</div>
-                <div>Mark</div>
-                <div>Ask</div>
-                <div style="color: #8B5CF6;">Strike</div>
-                <div>Bid</div>
-                <div>Mark</div>
-                <div>Ask</div>
-                <div>IV</div>
-                <div>Delta</div>
-                <div>Open</div>
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 100px 1fr 1fr 1fr 1fr 1fr 1fr; 
-                        gap: 8px; text-align: center; color: #B8B8B8; font-size: 0.8rem; margin-top: 0.3rem;">
-                <div colspan="6" style="grid-column: 1 / 7; text-align: center;">CALLS</div>
-                <div></div>
-                <div colspan="6" style="grid-column: 8 / 14; text-align: center;">PUTS</div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        # Create DataFrame for display
+        chain_display_data = []
         
-        # Options chain rows
-        chain_html = """
-        <div style="background: linear-gradient(135deg, #2D2D34 0%, #3A3A42 100%); 
-                    border: 1px solid rgba(232, 232, 232, 0.1); 
-                    border-top: none; border-radius: 0 0 8px 8px;">
-        """
-        
-        for i, strike in enumerate(common_strikes[:20]):  # Limit to 20 strikes for performance
-            # Get call and put data for this strike
+        for strike in common_strikes[:15]:  # Show top 15 strikes
             call_data = calls_df[calls_df['strike'] == strike]
             put_data = puts_df[puts_df['strike'] == strike]
             
-            if call_data.empty or put_data.empty:
-                continue
-            
-            call = call_data.iloc[0]
-            put = put_data.iloc[0]
-            
-            # Calculate Black-Scholes values (theoretical prices)
-            call_bs_price = call['price']  # Already calculated in data generation
-            put_bs_price = put['price']    # Already calculated in data generation
-            
-            # Determine if strike is ATM, ITM, or OTM for styling
-            moneyness = strike / spot_price
-            is_atm = 0.95 <= moneyness <= 1.05
-            row_bg = "rgba(139, 92, 246, 0.1)" if is_atm else "rgba(58, 58, 66, 0.3)"
-            
-            # Alternate row colors
-            if i % 2 == 1:
-                row_bg = "rgba(74, 74, 90, 0.2)"
-            
-            chain_html += f"""
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 100px 1fr 1fr 1fr 1fr 1fr 1fr; 
-                        gap: 8px; padding: 0.6rem 0.8rem; background: {row_bg}; 
-                        text-align: center; font-size: 0.85rem; color: #E8E8E8;
-                        border-bottom: 1px solid rgba(232, 232, 232, 0.05);">
+            if not call_data.empty and not put_data.empty:
+                call = call_data.iloc[0]
+                put = put_data.iloc[0]
                 
-                <!-- CALLS -->
-                <div style="color: #10B981;">{len(call_data) * 100}</div>  <!-- Simulated Open Interest -->
-                <div style="color: {'#10B981' if call['delta'] > 0 else '#EF4444'};">{call['delta']:.3f}</div>
-                <div style="color: #A78BFA;">{call['iv']*100:.1f}%</div>
-                <div style="color: #60A5FA;">${call['bid']:.2f}</div>
-                <div style="color: #8B5CF6; font-weight: bold;">${call['price']:.2f}</div>
-                <div style="color: #F59E0B;">${call['ask']:.2f}</div>
+                # Calculate moneyness for styling
+                moneyness = strike / spot_price
+                is_atm = 0.95 <= moneyness <= 1.05
                 
-                <!-- STRIKE -->
-                <div style="color: {'#8B5CF6' if is_atm else '#E8E8E8'}; font-weight: bold; 
-                           background: {'rgba(139, 92, 246, 0.2)' if is_atm else 'transparent'}; 
-                           padding: 0.3rem; border-radius: 4px;">
-                    ${strike:,.0f}
-                </div>
-                
-                <!-- PUTS -->
-                <div style="color: #F59E0B;">${put['bid']:.2f}</div>
-                <div style="color: #8B5CF6; font-weight: bold;">${put['price']:.2f}</div>
-                <div style="color: #60A5FA;">${put['ask']:.2f}</div>
-                <div style="color: #A78BFA;">{put['iv']*100:.1f}%</div>
-                <div style="color: {'#EF4444' if put['delta'] < 0 else '#10B981'};">{put['delta']:.3f}</div>
-                <div style="color: #10B981;">{len(put_data) * 100}</div>  <!-- Simulated Open Interest -->
-            </div>
-            """
+                chain_display_data.append({
+                    'Call_Open': len(call_data) * 50,  # Simulated OI
+                    'Call_Delta': f"{call['delta']:.3f}",
+                    'Call_IV': f"{call['iv']*100:.1f}%",
+                    'Call_Bid': f"${call['bid']:.2f}",
+                    'Call_Mark': f"${call['price']:.2f}",
+                    'Call_Ask': f"${call['ask']:.2f}",
+                    'Strike': f"${strike:,.0f}" + (" 🎯" if is_atm else ""),
+                    'Put_Bid': f"${put['bid']:.2f}",
+                    'Put_Mark': f"${put['price']:.2f}",
+                    'Put_Ask': f"${put['ask']:.2f}",
+                    'Put_IV': f"{put['iv']*100:.1f}%",
+                    'Put_Delta': f"{put['delta']:.3f}",
+                    'Put_Open': len(put_data) * 50,  # Simulated OI
+                })
         
-        chain_html += "</div>"
+        if chain_display_data:
+            chain_df = pd.DataFrame(chain_display_data)
+            
+            # Display the options chain table
+            st.dataframe(
+                chain_df,
+                column_config={
+                    'Call_Open': st.column_config.NumberColumn('Open', help='Open Interest'),
+                    'Call_Delta': st.column_config.TextColumn('Delta'),
+                    'Call_IV': st.column_config.TextColumn('IV'),
+                    'Call_Bid': st.column_config.TextColumn('Bid'),
+                    'Call_Mark': st.column_config.TextColumn('Mark'),
+                    'Call_Ask': st.column_config.TextColumn('Ask'),
+                    'Strike': st.column_config.TextColumn('Strike', help='Strike Price'),
+                    'Put_Bid': st.column_config.TextColumn('Bid'),
+                    'Put_Mark': st.column_config.TextColumn('Mark'),
+                    'Put_Ask': st.column_config.TextColumn('Ask'),
+                    'Put_IV': st.column_config.TextColumn('IV'),
+                    'Put_Delta': st.column_config.TextColumn('Delta'),
+                    'Put_Open': st.column_config.NumberColumn('Open', help='Open Interest'),
+                },
+                use_container_width=True,
+                hide_index=True
+            )
         
-        st.markdown(chain_html, unsafe_allow_html=True)
-        
-        # Black-Scholes Analysis Section
+        # Fixed Black-Scholes Analysis Section
         st.markdown("---")
         st.subheader("📈 Black-Scholes Analysis")
         
-        # Create Black-Scholes comparison table
+        # Create Black-Scholes comparison table with proper calculations
         bs_data = []
         
         for strike in common_strikes[:10]:  # Top 10 for detailed analysis
@@ -854,14 +976,21 @@ def options_chain_page():
                 call = call_data.iloc[0]
                 put = put_data.iloc[0]
                 
+                # Calculate actual market vs theoretical differences
+                call_market_premium = (call['ask'] - call['bid']) / 2 if call['ask'] > call['bid'] else 0
+                put_market_premium = (put['ask'] - put['bid']) / 2 if put['ask'] > put['bid'] else 0
+                
+                call_diff = ((call['ask'] - call['price']) / call['price'] * 100) if call['price'] > 0 else 0
+                put_diff = ((put['ask'] - put['price']) / put['price'] * 100) if put['price'] > 0 else 0
+                
                 bs_data.append({
                     'Strike': f"${strike:,.0f}",
-                    'Call Market': f"${call['price']:.2f}",
-                    'Call BS': f"${call['price']:.2f}",  # Using our calculated BS price
-                    'Call Diff': f"{((call['ask'] - call['price']) / call['price'] * 100):+.1f}%",
-                    'Put Market': f"${put['price']:.2f}",
-                    'Put BS': f"${put['price']:.2f}",  # Using our calculated BS price
-                    'Put Diff': f"{((put['ask'] - put['price']) / put['price'] * 100):+.1f}%",
+                    'Call Market': f"${call['ask']:.2f}",
+                    'Call BS': f"${call['price']:.2f}",
+                    'Call Diff': f"{call_diff:+.1f}%",
+                    'Put Market': f"${put['ask']:.2f}",
+                    'Put BS': f"${put['price']:.2f}",
+                    'Put Diff': f"{put_diff:+.1f}%",
                     'Call IV': f"{call['iv']*100:.1f}%",
                     'Put IV': f"{put['iv']*100:.1f}%"
                 })
@@ -874,22 +1003,24 @@ def options_chain_page():
                 hide_index=True
             )
         
-        # Options Chain Statistics
+        # Fixed Options Chain Statistics
         st.subheader("📊 Chain Statistics")
         
         stat_col1, stat_col2, stat_col3, stat_col4 = st.columns(4)
         
+        # Calculate actual call/put counts
+        actual_calls = len(calls_df)
+        actual_puts = len(puts_df)
+        actual_ratio = actual_calls / max(actual_puts, 1)
+        
         with stat_col1:
-            total_calls = len(calls_df)
-            st.metric("Total Calls", total_calls)
+            st.metric("Total Calls", actual_calls)
         
         with stat_col2:
-            total_puts = len(puts_df)
-            st.metric("Total Puts", total_puts)
+            st.metric("Total Puts", actual_puts)
         
         with stat_col3:
-            call_put_ratio = total_calls / max(total_puts, 1)
-            st.metric("Call/Put Ratio", f"{call_put_ratio:.2f}")
+            st.metric("Call/Put Ratio", f"{actual_ratio:.2f}")
         
         with stat_col4:
             max_pain = common_strikes[len(common_strikes)//2]  # Simplified max pain calculation
@@ -913,7 +1044,7 @@ def options_chain_page():
     st.markdown('</div>', unsafe_allow_html=True)
 
 def volatility_surface_page():
-    """Complete Volatility Surface Analysis with current point indicators and proper cross-sections."""
+    """Complete Volatility Surface Analysis with period selection and fixed calculations."""
     st.markdown('<div class="page-content">', unsafe_allow_html=True)
     
     st.header("🌋 Volatility Surface Analysis")
@@ -934,9 +1065,13 @@ def volatility_surface_page():
         ], key="surface_type")
     
     with col3:
-        interpolation_method = st.selectbox("Interpolation", [
-            "cubic", "linear", "nearest"
-        ], index=0, key="interpolation")
+        # Add volatility period selection
+        vol_period = st.selectbox("Volatility Period", [
+            ("7d", "Weekly"),
+            ("30d", "Monthly"), 
+            ("90d", "Quarterly"),
+            ("365d", "Annual")
+        ], index=1, format_func=lambda x: x[1], key="vol_period")
     
     with col4:
         if st.button("🔄 Refresh Surface", key="refresh_surface"):
@@ -972,16 +1107,20 @@ def volatility_surface_page():
             st.markdown('</div>', unsafe_allow_html=True)
             return
         
-        # Market overview for current point
+        # Market overview for current point with fixed calculations
         st.subheader("📊 Market Overview & Current Point")
         
         current_col1, current_col2, current_col3, current_col4 = st.columns(4)
         
-        current_hv = data_manager.get_historical_volatility(selected_asset) * 100
-        current_atm_iv = surface_data[
+        # Fix historical volatility calculation with proper period
+        current_hv = data_manager.get_historical_volatility(selected_asset, vol_period[0]) * 100
+        
+        # Fix ATM IV calculation
+        atm_data = surface_data[
             (surface_data['moneyness'] >= 0.98) & 
             (surface_data['moneyness'] <= 1.02)
-        ]['iv'].mean() * 100 if not surface_data.empty else current_hv
+        ]
+        current_atm_iv = atm_data['iv'].mean() * 100 if not atm_data.empty else current_hv
         
         with current_col1:
             st.markdown(f"""
@@ -1002,7 +1141,7 @@ def volatility_surface_page():
         with current_col3:
             st.markdown(f"""
             <div class="metric-card">
-                <h4 style="margin: 0 0 0.5rem 0; color: #B8B8B8;">Historical Vol</h4>
+                <h4 style="margin: 0 0 0.5rem 0; color: #B8B8B8;">{vol_period[1]} HV</h4>
                 <h2 style="margin: 0; color: #C4B5FD;">{current_hv:.1f}%</h2>
             </div>
             """, unsafe_allow_html=True)
@@ -1067,7 +1206,7 @@ def volatility_surface_page():
             points = surface_data[['moneyness', 'time_to_maturity']].values
             values = z_values.values
             
-            Z = griddata(points, values, (X, Y), method=interpolation_method, fill_value=np.nan)
+            Z = griddata(points, values, (X, Y), method='cubic', fill_value=np.nan)
             
             # Main surface
             fig_3d.add_trace(
