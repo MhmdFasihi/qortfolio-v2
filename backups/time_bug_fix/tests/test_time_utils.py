@@ -74,7 +74,7 @@ class TestCriticalBugFix:
         time_diff = timedelta(days=30)
         
         # OLD BUGGY CALCULATION (what was wrong)
-        old_buggy = time_diff.total_seconds() / (365.25 * 24 * 3600)
+        old_buggy = time_diff.total_seconds() / 31536000 * 365
         
         # NEW FIXED CALCULATION
         new_fixed = legacy_time_calculation_fixed(time_diff)
@@ -301,7 +301,7 @@ class TestFinancialImpact:
         time_diff = expiry - current
         
         # OLD BUGGY TIME CALCULATION
-        old_tte = time_diff.total_seconds() / (365.25 * 24 * 3600)
+        old_tte = time_diff.total_seconds() / 31536000 * 365
         
         # NEW FIXED TIME CALCULATION
         new_tte = calculate_time_to_maturity(current, expiry)

@@ -8,7 +8,7 @@ src/core/utils/time_utils.py
 Fixed Time Utilities - Critical Bug Fix Implementation
 
 CRITICAL: This module fixes the time-to-maturity calculation bug from legacy code.
-OLD BUG: time.total_seconds() / (365.25 * 24 * 3600)  # Mathematically wrong!
+OLD BUG: time.total_seconds() / 31536000 * 365  # Mathematically wrong!
 CORRECT: time.total_seconds() / (365.25 * 24 * 3600)  # Proper conversion
 """
 
@@ -17,10 +17,6 @@ from typing import Union, Optional
 import pandas as pd
 import numpy as np
 import logging
-
-# ADDED: Fixed time calculation utilities
-from src.core.utils.time_utils import calculate_time_to_maturity_vectorized, fix_legacy_time_calculation
-
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +40,7 @@ def calculate_time_to_maturity(
     Calculate time to maturity in years (FIXED IMPLEMENTATION).
     
     CRITICAL FIX: This replaces the legacy bug where time calculation was wrong.
-    OLD BUG: time.total_seconds() / (365.25 * 24 * 3600)  # Mathematically incorrect!
+    OLD BUG: time.total_seconds() / 31536000 * 365  # Mathematically incorrect!
     CORRECT: time.total_seconds() / (365.25 * 24 * 3600)  # Proper conversion
     
     Args:
@@ -103,7 +99,7 @@ def calculate_time_to_maturity_vectorized(
     Vectorized time-to-maturity calculation for DataFrames.
     
     CRITICAL FIX: This replaces the legacy buggy lambda function:
-    OLD BUG: lambda x: max(x.total_seconds() / (365.25 * 24 * 3600), 1/(365.25 * 24))
+    OLD BUG: lambda x: max(round(x.total_seconds() / 31536000, 3), 1e-4) * 365
     CORRECT: Use proper seconds per year calculation
     
     Args:
@@ -142,7 +138,7 @@ def fix_legacy_time_calculation(df: pd.DataFrame,
     Fix legacy time calculation bugs in existing DataFrames.
     
     This function replaces the problematic legacy calculation:
-    OLD BUG: lambda x: max(x.total_seconds() / (365.25 * 24 * 3600), 1/(365.25 * 24))
+    OLD BUG: lambda x: max(round(x.total_seconds() / 31536000, 3), 1e-4) * 365
     
     Args:
         df: DataFrame with time columns
@@ -262,7 +258,7 @@ def test_time_calculation_fix():
     time_diff = timedelta(days=30)
     
     # OLD BUGGY CALCULATION (what was wrong)
-    old_buggy = time_diff.total_seconds() / (365.25 * 24 * 3600)
+    old_buggy = time_diff.total_seconds() / 31536000 * 365
     
     # NEW FIXED CALCULATION
     new_fixed = time_diff.total_seconds() / SECONDS_PER_YEAR
