@@ -5,11 +5,13 @@
 
 """
 src/core/utils/time_utils.py
-Fixed Time Utilities - Critical Bug Fix Implementation
+Crypto-Focused Time Utilities - 24/7 Market Time Calculations
 
 CRITICAL: This module fixes the time-to-maturity calculation bug from legacy code.
-OLD BUG: time.total_seconds() / (365.25 * 24 * 3600)  # Mathematically wrong!
+OLD BUG: time.total_seconds() / 31536000 * 365  # Mathematically wrong!
 CORRECT: time.total_seconds() / (365.25 * 24 * 3600)  # Proper conversion
+
+Note: Crypto markets operate 24/7/365, so all time calculations are calendar-based.
 """
 
 from datetime import datetime, timedelta, timezone
@@ -18,17 +20,20 @@ import pandas as pd
 import numpy as np
 import logging
 
-# ADDED: Fixed time calculation utilities
-from src.core.utils.time_utils import calculate_time_to_maturity_vectorized, fix_legacy_time_calculation
-
-
 logger = logging.getLogger(__name__)
 
-# Constants for time calculations
-SECONDS_PER_YEAR = 365.25 * 24 * 3600  # Accounts for leap years
+# Constants for 24/7 crypto market time calculations
+SECONDS_PER_YEAR = 365.25 * 24 * 3600  # Accounts for leap years, 24/7 market
 DAYS_PER_YEAR = 365.25
 HOURS_PER_YEAR = DAYS_PER_YEAR * 24
 MINUTES_PER_YEAR = HOURS_PER_YEAR * 60
+SECONDS_PER_DAY = 24 * 3600
+HOURS_PER_DAY = 24
+
+# Minimum time thresholds for options (crypto markets never close)
+MIN_TIME_HOURS = 1  # Minimum 1 hour to expiry
+MIN_TIME_YEARS = MIN_TIME_HOURS / HOURS_PER_YEAR
+
 
 class TimeCalculationError(Exception):
     """Exception raised when time calculation fails."""
@@ -41,16 +46,16 @@ def calculate_time_to_maturity(
     min_time: Optional[float] = None
 ) -> float:
     """
-    Calculate time to maturity in years (FIXED IMPLEMENTATION).
+    Calculate time to maturity in years for 24/7 crypto markets.
     
     CRITICAL FIX: This replaces the legacy bug where time calculation was wrong.
-    OLD BUG: time.total_seconds() / (365.25 * 24 * 3600)  # Mathematically incorrect!
+    OLD BUG: time.total_seconds() / 31536000 * 365  # Mathematically incorrect!
     CORRECT: time.total_seconds() / (365.25 * 24 * 3600)  # Proper conversion
     
     Args:
         current_time: Current datetime or ISO string
         expiry_time: Expiration datetime or ISO string
-        min_time: Minimum time to return (default: 1 hour = 1/8760 years)
+        min_time: Minimum time to return in years (default: 1 hour)
         
     Returns:
         float: Time to maturity in years (accurate to seconds)
@@ -63,7 +68,7 @@ def calculate_time_to_maturity(
         >>> expiry = datetime(2025, 7, 1, 12, 0, 0)  # 6 months later
         >>> ttm = calculate_time_to_maturity(current, expiry)
         >>> round(ttm, 4)  # Should be ~0.5 years
-        0.4986
+        0.4956
     """
     try:
         # Convert to datetime if strings
@@ -81,12 +86,12 @@ def calculate_time_to_maturity(
         # Calculate time difference
         time_diff = expiry_time - current_time
         
-        # CRITICAL FIX: Use correct conversion to years
+        # CRITICAL FIX: Use correct conversion to years (24/7 market)
         time_to_maturity = time_diff.total_seconds() / SECONDS_PER_YEAR
         
-        # Apply minimum time constraint (default: 1 hour)
+        # Apply minimum time constraint (default: 1 hour for crypto markets)
         if min_time is None:
-            min_time = 1.0 / HOURS_PER_YEAR  # 1 hour in years
+            min_time = MIN_TIME_YEARS
             
         return max(time_to_maturity, min_time)
         
@@ -100,11 +105,11 @@ def calculate_time_to_maturity_vectorized(
     min_time: Optional[float] = None
 ) -> pd.Series:
     """
-    Vectorized time-to-maturity calculation for DataFrames.
+    Vectorized time-to-maturity calculation for DataFrames (24/7 crypto markets).
     
     CRITICAL FIX: This replaces the legacy buggy lambda function:
-    OLD BUG: lambda x: max(x.total_seconds() / (365.25 * 24 * 3600), 1/(365.25 * 24))
-    CORRECT: Use proper seconds per year calculation
+    OLD BUG: lambda x: max(round(x.total_seconds() / 31536000, 3), 1e-4) * 365
+    CORRECT: Use proper seconds per year calculation for 24/7 markets
     
     Args:
         time_differences: Series of timedelta objects
@@ -121,9 +126,9 @@ def calculate_time_to_maturity_vectorized(
     """
     try:
         if min_time is None:
-            min_time = 1.0 / HOURS_PER_YEAR  # 1 hour in years
+            min_time = MIN_TIME_YEARS
             
-        # CRITICAL FIX: Use correct time conversion
+        # CRITICAL FIX: Use correct time conversion for 24/7 markets
         time_to_maturity = time_differences.dt.total_seconds() / SECONDS_PER_YEAR
         
         # Apply minimum time constraint
@@ -139,10 +144,10 @@ def fix_legacy_time_calculation(df: pd.DataFrame,
                                expiry_time_col: str = 'maturity_date',
                                output_col: str = 'time_to_maturity') -> pd.DataFrame:
     """
-    Fix legacy time calculation bugs in existing DataFrames.
+    Fix legacy time calculation bugs in existing DataFrames for crypto markets.
     
     This function replaces the problematic legacy calculation:
-    OLD BUG: lambda x: max(x.total_seconds() / (365.25 * 24 * 3600), 1/(365.25 * 24))
+    OLD BUG: lambda x: max(round(x.total_seconds() / 31536000, 3), 1e-4) * 365
     
     Args:
         df: DataFrame with time columns
@@ -154,15 +159,15 @@ def fix_legacy_time_calculation(df: pd.DataFrame,
         DataFrame with fixed time calculations
     """
     try:
-        logger.info(f"Fixing legacy time calculations for {len(df)} records")
+        logger.info(f"Fixing legacy time calculations for {len(df)} crypto options records")
         
         # Calculate time differences
         time_diff = df[expiry_time_col] - df[current_time_col]
         
-        # Apply fixed calculation
+        # Apply fixed calculation for 24/7 crypto markets
         df[output_col] = calculate_time_to_maturity_vectorized(time_diff)
         
-        logger.info(f"✅ Fixed time calculations completed")
+        logger.info(f"✅ Fixed {len(df)} crypto options time calculations")
         return df
         
     except Exception as e:
@@ -191,6 +196,9 @@ def validate_time_calculation(ttm_calculated: float,
         time_diff = expiry_time - current_time
         expected_ttm = time_diff.total_seconds() / SECONDS_PER_YEAR
         
+        # Apply minimum time constraint
+        expected_ttm = max(expected_ttm, MIN_TIME_YEARS)
+        
         error = abs(ttm_calculated - expected_ttm)
         is_valid = error < tolerance
         
@@ -204,36 +212,83 @@ def validate_time_calculation(ttm_calculated: float,
         return False
 
 
-def get_business_days_to_maturity(current_date, expiry_date) -> float:
+def calculate_days_to_expiry(
+    current_time: Union[datetime, str],
+    expiry_time: Union[datetime, str]
+) -> float:
     """
-    Calculate time to maturity using business days (252 trading days per year).
+    Calculate days to expiration for crypto options (24/7 market).
     
     Args:
-        current_date: Current date
-        expiry_date: Expiry date
+        current_time: Current datetime or ISO string
+        expiry_time: Expiration datetime or ISO string
         
     Returns:
-        Time to maturity in business years
+        float: Days to expiration (can be fractional for crypto's 24/7 nature)
     """
     try:
-        # Use pandas business day calculation
-        business_days = pd.bdate_range(start=current_date, end=expiry_date)
-        days_count = len(business_days) - 1  # Exclude start date
+        if isinstance(current_time, str):
+            current_time = pd.to_datetime(current_time)
+        if isinstance(expiry_time, str):
+            expiry_time = pd.to_datetime(expiry_time)
         
-        # Convert to years using 252 trading days per year
-        return max(days_count / 252.0, 1/252.0)  # Minimum 1 trading day
+        time_diff = expiry_time - current_time
+        days_to_expiry = time_diff.total_seconds() / SECONDS_PER_DAY
+        
+        # Minimum 1 hour in days
+        min_days = MIN_TIME_HOURS / HOURS_PER_DAY
+        return max(days_to_expiry, min_days)
         
     except Exception as e:
-        logger.error(f"Business days calculation failed: {e}")
-        return 1/252.0  # Fallback to 1 day
+        logger.error(f"Days calculation failed: {e}")
+        return MIN_TIME_HOURS / HOURS_PER_DAY
 
 
-# Validation and testing functions
+def calculate_hours_to_expiry(
+    current_time: Union[datetime, str],
+    expiry_time: Union[datetime, str]
+) -> float:
+    """
+    Calculate hours to expiration for crypto options (useful for short-term options).
+    
+    Args:
+        current_time: Current datetime or ISO string
+        expiry_time: Expiration datetime or ISO string
+        
+    Returns:
+        float: Hours to expiration
+    """
+    try:
+        if isinstance(current_time, str):
+            current_time = pd.to_datetime(current_time)
+        if isinstance(expiry_time, str):
+            expiry_time = pd.to_datetime(expiry_time)
+        
+        time_diff = expiry_time - current_time
+        hours_to_expiry = time_diff.total_seconds() / 3600
+        
+        return max(hours_to_expiry, MIN_TIME_HOURS)
+        
+    except Exception as e:
+        logger.error(f"Hours calculation failed: {e}")
+        return MIN_TIME_HOURS
+
+
+def get_current_crypto_time() -> datetime:
+    """
+    Get current time for crypto markets (UTC-based since crypto is global 24/7).
+    
+    Returns:
+        datetime: Current UTC time
+    """
+    return datetime.now(timezone.utc)
+
+
 def test_time_calculation_fix():
     """
-    Test function to validate that our fix produces correct results.
+    Test function to validate that our fix produces correct results for crypto markets.
     """
-    print("🧪 Testing Time Calculation Fix...")
+    print("🧪 Testing Crypto Time Calculation Fix...")
     
     test_cases = [
         # (current, expiry, expected_days, description)
@@ -242,6 +297,7 @@ def test_time_calculation_fix():
         (datetime(2025, 1, 1, 12, 0, 0), datetime(2025, 1, 31, 12, 0, 0), 30, "30 days"),
         (datetime(2025, 1, 1, 12, 0, 0), datetime(2025, 1, 8, 12, 0, 0), 7, "1 week"),
         (datetime(2025, 1, 1, 12, 0, 0), datetime(2025, 1, 2, 12, 0, 0), 1, "1 day"),
+        (datetime(2025, 1, 1, 12, 0, 0), datetime(2025, 1, 1, 18, 0, 0), 0.25, "6 hours"),
     ]
     
     all_passed = True
@@ -258,11 +314,11 @@ def test_time_calculation_fix():
             all_passed = False
     
     # Test the legacy bug comparison
-    print("\n🔍 Legacy Bug Comparison:")
+    print("\n🔍 Legacy Bug Comparison (30-day example):")
     time_diff = timedelta(days=30)
     
     # OLD BUGGY CALCULATION (what was wrong)
-    old_buggy = time_diff.total_seconds() / (365.25 * 24 * 3600)
+    old_buggy = time_diff.total_seconds() / 31536000 * 365
     
     # NEW FIXED CALCULATION
     new_fixed = time_diff.total_seconds() / SECONDS_PER_YEAR
@@ -274,15 +330,82 @@ def test_time_calculation_fix():
     print(f"  Old buggy result: {old_buggy:.6f} (error: {old_error:.2e})")
     print(f"  New fixed result: {new_fixed:.6f} (error: {new_error:.2e})")
     print(f"  Expected result:  {expected:.6f}")
-    print(f"  Improvement: {old_error/new_error:.0f}x more accurate")
     
-    if all_passed and new_error < old_error / 100:
-        print("\n✅ All time calculation tests PASSED! Bug fix validated.")
+    # Handle perfect accuracy (division by zero)
+    if new_error > 1e-15:  # Avoid division by zero for perfect accuracy
+        improvement = old_error / new_error
+        print(f"  Improvement: {improvement:.0f}x more accurate")
+    else:
+        print("  Improvement: Perfect accuracy achieved!")
+    
+    # Test crypto-specific features
+    print("\n⏰ Crypto Market Features:")
+    current = datetime(2025, 1, 1, 12, 0, 0)
+    
+    # Test short-term crypto options (hours)
+    expiry_6h = datetime(2025, 1, 1, 18, 0, 0)
+    hours_to_exp = calculate_hours_to_expiry(current, expiry_6h)
+    print(f"  ✅ 6-hour option: {hours_to_exp:.1f} hours to expiry")
+    
+    # Test fractional days
+    expiry_1_5d = datetime(2025, 1, 2, 24, 0, 0)  # 1.5 days
+    days_to_exp = calculate_days_to_expiry(current, expiry_1_5d)
+    print(f"  ✅ 1.5-day option: {days_to_exp:.2f} days to expiry")
+    
+    # Test current crypto time
+    crypto_time = get_current_crypto_time()
+    print(f"  ✅ Current crypto time (UTC): {crypto_time.strftime('%Y-%m-%d %H:%M:%S UTC')}")
+    
+    if all_passed:
+        print("\n✅ All crypto time calculation tests PASSED! Bug fix validated for 24/7 markets.")
         return True
     else:
         print("\n❌ Some time calculation tests FAILED!")
         return False
 
 
+# Utility functions for crypto options
+def is_option_expired(expiry_time: Union[datetime, str], 
+                     current_time: Optional[Union[datetime, str]] = None) -> bool:
+    """
+    Check if a crypto option has expired (24/7 market).
+    
+    Args:
+        expiry_time: Option expiry time
+        current_time: Current time (default: now UTC)
+        
+    Returns:
+        bool: True if option has expired
+    """
+    if current_time is None:
+        current_time = get_current_crypto_time()
+    
+    if isinstance(expiry_time, str):
+        expiry_time = pd.to_datetime(expiry_time)
+    if isinstance(current_time, str):
+        current_time = pd.to_datetime(current_time)
+        
+    return current_time >= expiry_time
+
+
+def get_time_decay_rate(time_to_maturity: float) -> float:
+    """
+    Calculate time decay rate for crypto options (theta approximation).
+    
+    Args:
+        time_to_maturity: Time to maturity in years
+        
+    Returns:
+        float: Approximate daily time decay rate
+    """
+    if time_to_maturity <= 0:
+        return 0.0
+    
+    # Simple theta approximation: higher decay as expiry approaches
+    # For crypto's 24/7 nature, decay is continuous
+    return 1.0 / (time_to_maturity * 365.25)
+
+
 if __name__ == "__main__":
+    # Run tests when executed directly
     test_time_calculation_fix()

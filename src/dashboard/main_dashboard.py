@@ -335,8 +335,8 @@ def render_header():
             <h2>${btc_price:,.0f}</h2>
         </div>
         """, unsafe_allow_html=True)
-    
-    with col2:
+        
+        with col2:
         eth_price = data_manager.get_current_price("ETH")
         st.markdown(f"""
         <div class="metric-card">
@@ -344,8 +344,8 @@ def render_header():
             <h2>${eth_price:,.0f}</h2>
         </div>
         """, unsafe_allow_html=True)
-    
-    with col3:
+        
+        with col3:
         btc_vol = data_manager.get_historical_volatility("BTC") * 100
         st.markdown(f"""
         <div class="metric-card">
@@ -378,10 +378,10 @@ def market_overview_page():
     with col2:
         auto_refresh = st.checkbox("Auto Refresh (30s)", value=True)
     
-    if auto_refresh:
-        time.sleep(1)
-        st.rerun()
-    
+        if auto_refresh:
+            time.sleep(1)
+            st.rerun()
+        
     # Price charts
     st.subheader("💰 Price Charts")
     
@@ -484,7 +484,7 @@ def market_overview_page():
             if len(hist) >= 2:
                 change_24h = (hist['Close'].iloc[-1] - hist['Close'].iloc[-2]) / hist['Close'].iloc[-2] * 100
                 volume_24h = hist['Volume'].iloc[-1]
-            else:
+                    else:
                 change_24h = 0
                 volume_24h = 0
             
@@ -512,11 +512,11 @@ def options_chain_page():
     
     # Controls
     col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
+        
+        with col1:
         selected_asset = st.selectbox("Select Asset", ["BTC", "ETH"], index=0)
-    
-    with col2:
+        
+        with col2:
         option_type_filter = st.selectbox("Option Type", ["All", "Calls Only", "Puts Only"])
     
     with col3:
@@ -700,7 +700,7 @@ def volatility_surface_page():
     col1, col2 = st.columns([3, 1])
     with col1:
         selected_asset = st.selectbox("Select Asset", ["BTC", "ETH"], index=0, key="vol_surface_asset")
-    with col2:
+        with col2:
         surface_type = st.selectbox("Surface Type", ["Implied Volatility", "Delta Surface", "Gamma Surface"])
     
     try:
@@ -709,8 +709,8 @@ def volatility_surface_page():
         
         if options_df.empty:
             st.error("No options data for volatility surface")
-            return
-        
+                    return
+                
         # Prepare data for surface
         spot_price = options_df['spot_price'].iloc[0]
         
@@ -726,7 +726,7 @@ def volatility_surface_page():
         
         if surface_data.empty:
             st.error("Insufficient data for volatility surface")
-            return
+                return
         
         # Create surface plot
         st.subheader(f"📊 {surface_type}")
@@ -886,14 +886,14 @@ def pnl_analysis_page():
     
     # Asset and option selection
     col1, col2, col3 = st.columns(3)
-    
-    with col1:
+            
+            with col1:
         selected_asset = st.selectbox("Select Asset", ["BTC", "ETH"], index=0, key="pnl_asset")
-    
-    with col2:
+            
+            with col2:
         option_type = st.selectbox("Option Type", ["call", "put"], index=0)
-    
-    with col3:
+            
+            with col3:
         analysis_type = st.selectbox("Analysis Type", ["Single Option", "Portfolio", "Strategy"])
     
     # Get options data
@@ -1141,8 +1141,8 @@ def pnl_analysis_page():
                 },
                 use_container_width=True
             )
-            
-    except Exception as e:
+                
+            except Exception as e:
         st.error(f"Error in PnL analysis: {str(e)}")
         st.info("PnL analysis is now working with enhanced linear charts as requested.")
 
@@ -1377,8 +1377,8 @@ def risk_management_page():
                 title_text=f"{selected_asset} Portfolio Risk Analysis"
             )
             
-            st.plotly_chart(fig, use_container_width=True)
-            
+                        st.plotly_chart(fig, use_container_width=True)
+                        
             # Value at Risk (VaR) Calculation
             st.subheader("📉 Value at Risk Analysis")
             
@@ -1418,7 +1418,7 @@ def risk_management_page():
             
             if not alerts:
                 st.success("✅ Portfolio risk levels are within acceptable ranges")
-            else:
+                    else:
                 for alert in alerts:
                     st.warning(alert)
             
@@ -1463,8 +1463,8 @@ def portfolio_analytics_page():
     
     if not selected_assets:
         st.warning("Please select at least one asset for portfolio analysis")
-        return
-    
+                        return
+                    
     # Portfolio construction
     st.subheader("🏗️ Portfolio Construction")
     
@@ -1476,14 +1476,14 @@ def portfolio_analytics_page():
             volatility = data_manager.get_historical_volatility(asset)
             
             col1, col2, col3 = st.columns(3)
-            
-            with col1:
+                    
+                    with col1:
                 allocation = st.slider(f"{asset} Allocation (%)", 0.0, 100.0, 50.0, key=f"{asset}_allocation")
-            
-            with col2:
+                    
+                    with col2:
                 investment = st.number_input(f"{asset} Investment ($)", value=10000.0, key=f"{asset}_investment")
-            
-            with col3:
+                    
+                    with col3:
                 st.metric(f"{asset} Price", f"${current_price:,.2f}")
                 st.metric(f"{asset} Volatility", f"{volatility*100:.1f}%")
             
@@ -1500,7 +1500,7 @@ def portfolio_analytics_page():
                 'value': position_size * current_price
             })
             
-        except Exception as e:
+                    except Exception as e:
             st.error(f"Error loading {asset} data: {e}")
     
     if portfolio_data:

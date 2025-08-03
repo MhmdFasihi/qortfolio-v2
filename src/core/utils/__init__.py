@@ -4,25 +4,28 @@
 # Contact for commercial licensing: mhmd.fasihi@gmail.com
 
 """
+src/core/utils/__init__.py
 Core utilities package initialization.
 """
 
 from .time_utils import (
     calculate_time_to_maturity,
-    calculate_time_to_maturity_days,
-    get_current_time,
-    get_nearest_expiry_date,
-    get_default_expiry_dates,
-    parse_expiry_string,
-    validate_time_calculation
+    calculate_time_to_maturity_vectorized,
+    fix_legacy_time_calculation,
+    validate_time_calculation,
+    get_business_days_to_maturity,
+    SECONDS_PER_YEAR,
+    DAYS_PER_YEAR,
+    TimeCalculationError
 )
 
 __all__ = [
     'calculate_time_to_maturity',
-    'calculate_time_to_maturity_days',
-    'get_current_time',
-    'get_nearest_expiry_date',
-    'get_default_expiry_dates',
-    'parse_expiry_string',
-    'validate_time_calculation'
+    'calculate_time_to_maturity_vectorized', 
+    'fix_legacy_time_calculation',
+    'validate_time_calculation',
+    'get_business_days_to_maturity',
+    'SECONDS_PER_YEAR',
+    'DAYS_PER_YEAR',
+    'TimeCalculationError'
 ]

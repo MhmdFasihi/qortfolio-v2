@@ -4,18 +4,12 @@
 # Contact for commercial licensing: mhmd.fasihi@gmail.com
 
 """
-Qortfolio V2 - Main package initialization
+src/__init__.py
+Qortfolio V2 source package initialization.
 """
 
-__version__ = "2.0.0"
-__author__ = "Seyed Mohammad Hossein Fasihi (Mhmd Fasihi)"
+__version__ = "0.1.0"
+__author__ = "Mhmd Fasihi"
 __email__ = "mhmd.fasihi@gmail.com"
-__description__ = "Quantitative Finance Platform for Options Analytics and Volatility Modeling"
 
-# Package metadata
-__all__ = [
-    '__version__',
-    '__author__', 
-    '__email__',
-    '__description__'
-]
+# This package contains the Qortfolio V2 quantitative finance platform

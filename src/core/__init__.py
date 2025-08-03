@@ -4,16 +4,21 @@
 # Contact for commercial licensing: mhmd.fasihi@gmail.com
 
 """
+src/core/__init__.py
 Core package initialization.
 """
 
-from .config import ConfigManager, get_config, reset_config
-from .logging import setup_logging, get_logger
+# Import key utilities that are commonly used
+from .utils.time_utils import (
+    calculate_time_to_maturity,
+    SECONDS_PER_YEAR,
+    TimeCalculationError
+)
+
+__version__ = "0.1.0"
 
 __all__ = [
-    'ConfigManager',
-    'get_config',
-    'reset_config',
-    'setup_logging',
-    'get_logger'
+    'calculate_time_to_maturity',
+    'SECONDS_PER_YEAR', 
+    'TimeCalculationError'
 ]
