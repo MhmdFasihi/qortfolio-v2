@@ -4,34 +4,55 @@
 # Contact for commercial licensing: mhmd.fasihi@gmail.com
 
 """
-Fixed Time Utilities - Critical Bug Fix
-Location: src/core/utils/time_utils.py
+src/core/utils/time_utils.py
+Fixed Time Utilities - Critical Bug Fix Implementation
 
 CRITICAL: This module fixes the time-to-maturity calculation bug from legacy code.
 OLD BUG: time.total_seconds() / 31536000 * 365  # Mathematically wrong!
 CORRECT: time.total_seconds() / (365.25 * 24 * 3600)  # Proper conversion
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Union, Optional
 import pandas as pd
+import numpy as np
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Constants for time calculations
+SECONDS_PER_YEAR = 365.25 * 24 * 3600  # Accounts for leap years
+DAYS_PER_YEAR = 365.25
+HOURS_PER_YEAR = DAYS_PER_YEAR * 24
+MINUTES_PER_YEAR = HOURS_PER_YEAR * 60
+
+class TimeCalculationError(Exception):
+    """Exception raised when time calculation fails."""
+    pass
 
 
 def calculate_time_to_maturity(
     current_time: Union[datetime, str], 
-    expiry_time: Union[datetime, str]
+    expiry_time: Union[datetime, str],
+    min_time: Optional[float] = None
 ) -> float:
     """
-    Calculate time to maturity in years (correct implementation).
+    Calculate time to maturity in years (FIXED IMPLEMENTATION).
     
     CRITICAL FIX: This replaces the legacy bug where time calculation was wrong.
+    OLD BUG: time.total_seconds() / 31536000 * 365  # Mathematically incorrect!
+    CORRECT: time.total_seconds() / (365.25 * 24 * 3600)  # Proper conversion
     
     Args:
         current_time: Current datetime or ISO string
         expiry_time: Expiration datetime or ISO string
+        min_time: Minimum time to return (default: 1 hour = 1/8760 years)
         
     Returns:
         float: Time to maturity in years (accurate to seconds)
+        
+    Raises:
+        TimeCalculationError: If calculation fails
         
     Example:
         >>> current = datetime(2025, 1, 1, 12, 0, 0)
@@ -40,167 +61,223 @@ def calculate_time_to_maturity(
         >>> round(ttm, 4)  # Should be ~0.5 years
         0.4986
     """
-    # Convert to datetime if strings
-    if isinstance(current_time, str):
-        current_time = pd.to_datetime(current_time)
-    if isinstance(expiry_time, str):
-        expiry_time = pd.to_datetime(expiry_time)
-    
-    # Calculate time difference
-    time_diff = expiry_time - current_time
-    
-    # CRITICAL FIX: Use correct conversion to years
-    # OLD BUG: time_diff.total_seconds() / 31536000 * 365  # Wrong!
-    # CORRECT: Use proper seconds per year calculation
-    seconds_per_year = 365.25 * 24 * 3600  # Accounts for leap years
-    time_to_maturity = time_diff.total_seconds() / seconds_per_year
-    
-    return max(0.0, time_to_maturity)  # Ensure non-negative
-
-
-def calculate_days_to_expiry(
-    current_time: Union[datetime, str],
-    expiry_time: Union[datetime, str]
-) -> int:
-    """
-    Calculate days to expiration (integer).
-    
-    Args:
-        current_time: Current datetime or ISO string
-        expiry_time: Expiration datetime or ISO string
+    try:
+        # Convert to datetime if strings
+        if isinstance(current_time, str):
+            current_time = pd.to_datetime(current_time)
+        if isinstance(expiry_time, str):
+            expiry_time = pd.to_datetime(expiry_time)
         
-    Returns:
-        int: Days to expiration
-    """
-    if isinstance(current_time, str):
-        current_time = pd.to_datetime(current_time)
-    if isinstance(expiry_time, str):
-        expiry_time = pd.to_datetime(expiry_time)
-    
-    time_diff = expiry_time - current_time
-    return max(0, time_diff.days)
+        # Ensure timezone consistency
+        if current_time.tzinfo is not None and expiry_time.tzinfo is None:
+            expiry_time = expiry_time.replace(tzinfo=current_time.tzinfo)
+        elif current_time.tzinfo is None and expiry_time.tzinfo is not None:
+            current_time = current_time.replace(tzinfo=expiry_time.tzinfo)
+            
+        # Calculate time difference
+        time_diff = expiry_time - current_time
+        
+        # CRITICAL FIX: Use correct conversion to years
+        time_to_maturity = time_diff.total_seconds() / SECONDS_PER_YEAR
+        
+        # Apply minimum time constraint (default: 1 hour)
+        if min_time is None:
+            min_time = 1.0 / HOURS_PER_YEAR  # 1 hour in years
+            
+        return max(time_to_maturity, min_time)
+        
+    except Exception as e:
+        logger.error(f"Time calculation failed: {e}")
+        raise TimeCalculationError(f"Failed to calculate time to maturity: {e}")
 
 
-def create_expiry_time_series(
-    start_date: datetime,
-    frequencies: list = None
+def calculate_time_to_maturity_vectorized(
+    time_differences: pd.Series,
+    min_time: Optional[float] = None
 ) -> pd.Series:
     """
-    Create a series of expiry times for options analysis.
+    Vectorized time-to-maturity calculation for DataFrames.
+    
+    CRITICAL FIX: This replaces the legacy buggy lambda function:
+    OLD BUG: lambda x: max(round(x.total_seconds() / 31536000, 3), 1e-4) * 365
+    CORRECT: Use proper seconds per year calculation
     
     Args:
-        start_date: Starting date
-        frequencies: List of expiry frequencies ['weekly', 'monthly', 'quarterly']
+        time_differences: Series of timedelta objects
+        min_time: Minimum time in years (default: 1 hour)
         
     Returns:
-        pd.Series: Series of expiry datetimes
+        Series of time-to-maturity values in years
+        
+    Example:
+        >>> # Fix the legacy bug in option processing
+        >>> option_data["time_to_maturity"] = calculate_time_to_maturity_vectorized(
+        ...     option_data["maturity_date"] - option_data["date_time"]
+        ... )
     """
-    if frequencies is None:
-        frequencies = ['weekly', 'monthly', 'quarterly']
-    
-    expiry_dates = []
-    
-    if 'weekly' in frequencies:
-        # Weekly expiries (next 8 weeks)
-        for i in range(1, 9):
-            weekly_expiry = start_date + timedelta(weeks=i)
-            expiry_dates.append(weekly_expiry)
-    
-    if 'monthly' in frequencies:
-        # Monthly expiries (next 6 months)
-        for i in range(1, 7):
-            monthly_expiry = start_date + timedelta(days=30*i)
-            expiry_dates.append(monthly_expiry)
-    
-    if 'quarterly' in frequencies:
-        # Quarterly expiries
-        for i in range(1, 5):
-            quarterly_expiry = start_date + timedelta(days=90*i)
-            expiry_dates.append(quarterly_expiry)
-    
-    return pd.Series(sorted(set(expiry_dates)))
+    try:
+        if min_time is None:
+            min_time = 1.0 / HOURS_PER_YEAR  # 1 hour in years
+            
+        # CRITICAL FIX: Use correct time conversion
+        time_to_maturity = time_differences.dt.total_seconds() / SECONDS_PER_YEAR
+        
+        # Apply minimum time constraint
+        return np.maximum(time_to_maturity, min_time)
+        
+    except Exception as e:
+        logger.error(f"Vectorized time calculation failed: {e}")
+        raise TimeCalculationError(f"Vectorized time calculation failed: {e}")
 
 
-def validate_time_to_maturity(ttm: float) -> bool:
+def fix_legacy_time_calculation(df: pd.DataFrame, 
+                               current_time_col: str = 'date_time',
+                               expiry_time_col: str = 'maturity_date',
+                               output_col: str = 'time_to_maturity') -> pd.DataFrame:
     """
-    Validate time to maturity value.
+    Fix legacy time calculation bugs in existing DataFrames.
+    
+    This function replaces the problematic legacy calculation:
+    OLD BUG: lambda x: max(round(x.total_seconds() / 31536000, 3), 1e-4) * 365
     
     Args:
-        ttm: Time to maturity in years
+        df: DataFrame with time columns
+        current_time_col: Column name for current time
+        expiry_time_col: Column name for expiry time  
+        output_col: Column name for output time-to-maturity
         
     Returns:
-        bool: True if valid, False otherwise
+        DataFrame with fixed time calculations
     """
-    return 0 <= ttm <= 10  # Reasonable range: 0 to 10 years
+    try:
+        logger.info(f"Fixing legacy time calculations for {len(df)} records")
+        
+        # Calculate time differences
+        time_diff = df[expiry_time_col] - df[current_time_col]
+        
+        # Apply fixed calculation
+        df[output_col] = calculate_time_to_maturity_vectorized(time_diff)
+        
+        logger.info(f"✅ Fixed time calculations completed")
+        return df
+        
+    except Exception as e:
+        logger.error(f"Failed to fix legacy time calculations: {e}")
+        raise TimeCalculationError(f"Legacy fix failed: {e}")
 
 
-def get_current_market_time() -> datetime:
+def validate_time_calculation(ttm_calculated: float, 
+                            current_time: datetime,
+                            expiry_time: datetime,
+                            tolerance: float = 1e-6) -> bool:
     """
-    Get current market time (UTC).
-    
-    Returns:
-        datetime: Current UTC time
-    """
-    return datetime.utcnow()
-
-
-def format_time_to_maturity(ttm: float) -> str:
-    """
-    Format time to maturity for display.
+    Validate time-to-maturity calculation against known correct result.
     
     Args:
-        ttm: Time to maturity in years
+        ttm_calculated: Calculated time-to-maturity
+        current_time: Current datetime
+        expiry_time: Expiry datetime
+        tolerance: Acceptable error tolerance
         
     Returns:
-        str: Formatted string like "45.2 days" or "1.2 years"
+        True if calculation is accurate within tolerance
     """
-    if ttm < 1/365.25:  # Less than 1 day
-        hours = ttm * 365.25 * 24
-        return f"{hours:.1f} hours"
-    elif ttm < 1/12:  # Less than 1 month
-        days = ttm * 365.25
-        return f"{days:.1f} days"
-    elif ttm < 1:  # Less than 1 year
-        months = ttm * 12
-        return f"{months:.1f} months"
-    else:
-        return f"{ttm:.2f} years"
+    try:
+        # Calculate expected result manually
+        time_diff = expiry_time - current_time
+        expected_ttm = time_diff.total_seconds() / SECONDS_PER_YEAR
+        
+        error = abs(ttm_calculated - expected_ttm)
+        is_valid = error < tolerance
+        
+        if not is_valid:
+            logger.warning(f"Time calculation validation failed: error={error}, tolerance={tolerance}")
+            
+        return is_valid
+        
+    except Exception as e:
+        logger.error(f"Time validation failed: {e}")
+        return False
 
 
-# Test function to validate the fix
+def get_business_days_to_maturity(current_date, expiry_date) -> float:
+    """
+    Calculate time to maturity using business days (252 trading days per year).
+    
+    Args:
+        current_date: Current date
+        expiry_date: Expiry date
+        
+    Returns:
+        Time to maturity in business years
+    """
+    try:
+        # Use pandas business day calculation
+        business_days = pd.bdate_range(start=current_date, end=expiry_date)
+        days_count = len(business_days) - 1  # Exclude start date
+        
+        # Convert to years using 252 trading days per year
+        return max(days_count / 252.0, 1/252.0)  # Minimum 1 trading day
+        
+    except Exception as e:
+        logger.error(f"Business days calculation failed: {e}")
+        return 1/252.0  # Fallback to 1 day
+
+
+# Validation and testing functions
 def test_time_calculation_fix():
     """
-    Test the critical time calculation fix.
-    
-    This function validates that our fix produces correct results.
+    Test function to validate that our fix produces correct results.
     """
-    print("Testing Time Calculation Fix...")
+    print("🧪 Testing Time Calculation Fix...")
     
-    # Test case 1: Exactly 6 months
-    current = datetime(2025, 1, 1, 12, 0, 0)
-    expiry = datetime(2025, 7, 1, 12, 0, 0)
-    ttm = calculate_time_to_maturity(current, expiry)
+    test_cases = [
+        # (current, expiry, expected_days, description)
+        (datetime(2025, 1, 1, 12, 0, 0), datetime(2025, 7, 1, 12, 0, 0), 181, "6 months"),
+        (datetime(2025, 1, 1, 12, 0, 0), datetime(2026, 1, 1, 12, 0, 0), 365, "1 year"),
+        (datetime(2025, 1, 1, 12, 0, 0), datetime(2025, 1, 31, 12, 0, 0), 30, "30 days"),
+        (datetime(2025, 1, 1, 12, 0, 0), datetime(2025, 1, 8, 12, 0, 0), 7, "1 week"),
+        (datetime(2025, 1, 1, 12, 0, 0), datetime(2025, 1, 2, 12, 0, 0), 1, "1 day"),
+    ]
     
-    expected = 0.4986  # ~6 months / 12 months
-    print(f"6 months test: {ttm:.4f} (expected ~{expected})")
+    all_passed = True
     
-    # Test case 2: Exactly 1 year
-    current = datetime(2025, 1, 1, 12, 0, 0)
-    expiry = datetime(2026, 1, 1, 12, 0, 0)
-    ttm = calculate_time_to_maturity(current, expiry)
+    for current, expiry, expected_days, description in test_cases:
+        ttm = calculate_time_to_maturity(current, expiry)
+        expected_years = expected_days / 365.25
+        error = abs(ttm - expected_years)
+        
+        if error < 1e-6:
+            print(f"  ✅ {description}: {ttm:.6f} years (expected {expected_years:.6f})")
+        else:
+            print(f"  ❌ {description}: {ttm:.6f} years (expected {expected_years:.6f}) - Error: {error:.2e}")
+            all_passed = False
     
-    expected = 1.0
-    print(f"1 year test: {ttm:.4f} (expected {expected})")
+    # Test the legacy bug comparison
+    print("\n🔍 Legacy Bug Comparison:")
+    time_diff = timedelta(days=30)
     
-    # Test case 3: Exactly 30 days
-    current = datetime(2025, 1, 1, 12, 0, 0)
-    expiry = datetime(2025, 1, 31, 12, 0, 0)
-    ttm = calculate_time_to_maturity(current, expiry)
+    # OLD BUGGY CALCULATION (what was wrong)
+    old_buggy = time_diff.total_seconds() / 31536000 * 365
     
-    expected = 30 / 365.25  # ~0.0821
-    print(f"30 days test: {ttm:.4f} (expected ~{expected:.4f})")
+    # NEW FIXED CALCULATION
+    new_fixed = time_diff.total_seconds() / SECONDS_PER_YEAR
     
-    print("✅ Time calculation fix validated!")
+    expected = 30 / 365.25
+    old_error = abs(old_buggy - expected)
+    new_error = abs(new_fixed - expected)
+    
+    print(f"  Old buggy result: {old_buggy:.6f} (error: {old_error:.2e})")
+    print(f"  New fixed result: {new_fixed:.6f} (error: {new_error:.2e})")
+    print(f"  Expected result:  {expected:.6f}")
+    print(f"  Improvement: {old_error/new_error:.0f}x more accurate")
+    
+    if all_passed and new_error < old_error / 100:
+        print("\n✅ All time calculation tests PASSED! Bug fix validated.")
+        return True
+    else:
+        print("\n❌ Some time calculation tests FAILED!")
+        return False
 
 
 if __name__ == "__main__":
