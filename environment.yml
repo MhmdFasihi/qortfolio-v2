@@ -1,0 +1,42 @@
+name: qortfolio-v2
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - pandas>=2.0.0
+  - numpy>=1.24.0
+  - scipy>=1.11.0
+  - matplotlib>=3.7.0
+  - jupyter
+  - ipython
+  - pip:
+    # Core Framework (Phase 1)
+    - reflex>=0.3.0
+    - pymongo>=4.6.0
+    - motor>=3.3.0
+    
+    # Financial Libraries (Phase 1)
+    - yfinance>=0.2.18
+    - py_vollib>=1.0.1
+    
+    # Data Processing
+    - aiohttp>=3.9.0
+    - websockets>=12.0
+    - requests>=2.31.0
+    
+    # Visualization
+    - plotly>=5.17.0
+    
+    # Utilities
+    - python-dotenv>=1.0.0
+    - pyyaml>=6.0.1
+    - pytz>=2023.3
+    
+    # Development
+    - pytest>=7.4.0
+    - pytest-cov>=4.1.0
+    - pytest-asyncio>=0.21.0
+    - black>=23.0.0
+    - mypy>=1.8.0

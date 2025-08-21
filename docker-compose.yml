@@ -1,0 +1,94 @@
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:7.0
+    container_name: qortfolio_mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-secure_password_123}
+      MONGO_INITDB_DATABASE: qortfolio
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./docker/mongodb/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+    networks:
+      - qortfolio_network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Redis Cache (for future use)
+  redis:
+    image: redis:7-alpine
+    container_name: qortfolio_redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD:-redis_password_123}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - qortfolio_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Qortfolio Application
+  qortfolio_app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: qortfolio_app
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+      - "8000:8000"  # Backend API port
+    environment:
+      # Database configuration
+      - MONGODB_URL=mongodb://admin:${MONGO_PASSWORD:-secure_password_123}@mongodb:27017/qortfolio?authSource=admin
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-redis_password_123}@redis:6379/0
+      
+      # Application configuration
+      - ENVIRONMENT=development
+      - DEBUG=true
+      - LOG_LEVEL=INFO
+      
+      # API configuration
+      - DERIBIT_CLIENT_ID=${DERIBIT_CLIENT_ID:-}
+      - DERIBIT_CLIENT_SECRET=${DERIBIT_CLIENT_SECRET:-}
+      - YFINANCE_RATE_LIMIT=100
+      
+      # Reflex configuration
+      - REFLEX_HOST=0.0.0.0
+      - REFLEX_PORT=3000
+      
+    volumes:
+      - ./src:/app/src
+      - ./config:/app/config
+      - ./tests:/app/tests
+    networks:
+      - qortfolio_network
+
+volumes:
+  mongodb_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  qortfolio_network:
+    driver: bridge
