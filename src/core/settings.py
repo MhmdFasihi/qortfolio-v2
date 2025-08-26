@@ -99,6 +99,7 @@ class Config:
         except ImportError as e:
             logger.error(f"❌ Failed to load crypto sectors: {e}")
             raise ImportError(f"Crypto sectors module is required: {e}")
+
     def _load_database_config(self) -> DatabaseConfig:
         """Load database configuration from environment variables."""
         return DatabaseConfig(
@@ -131,7 +132,7 @@ class Config:
     def _load_crypto_mapping(self) -> Dict[str, str]:
         """Load cryptocurrency ticker mappings (legacy method)."""
         # Use crypto_sectors if available
-        if self.crypto_sectors:
+        if getattr(self, "crypto_sectors", None):
             return self.crypto_sectors.ticker_mapping
         
         # Otherwise load from file or use defaults
@@ -200,28 +201,28 @@ class Config:
         Get yfinance ticker for a given crypto symbol.
         Uses crypto_sectors if available, otherwise falls back to mapping.
         """
-        if self.crypto_sectors:
+        if getattr(self, "crypto_sectors", None):
             return self.crypto_sectors.get_yfinance_ticker(symbol)
-        return self.crypto_mapping.get(symbol, f"{symbol}-USD")
+        return self._load_crypto_mapping().get(symbol, f"{symbol}-USD")
     
     def get_all_sectors(self) -> List[str]:
         """Get list of all available sectors."""
-        if self.crypto_sectors:
+        if getattr(self, "crypto_sectors", None):
             return self.crypto_sectors.get_all_sectors()
         return ["DeFi", "Infrastructure", "AI", "Digital Assets", "Privacy", "Services", "DApps"]
     
     def get_sector_tickers(self, sector: str) -> List[str]:
         """Get tickers for a specific sector."""
-        if self.crypto_sectors:
+        if getattr(self, "crypto_sectors", None):
             return self.crypto_sectors.get_sector_tickers(sector)
         return []
     
     def validate_ticker(self, ticker: str) -> bool:
         """Validate if a ticker exists in our configuration."""
-        if self.crypto_sectors:
+        if getattr(self, "crypto_sectors", None):
             is_valid, _ = self.crypto_sectors.validate_ticker(ticker)
             return is_valid
-        return ticker in self.crypto_mapping
+        return ticker in self._load_crypto_mapping()
     
     def is_production(self) -> bool:
         """Check if running in production environment."""
@@ -271,7 +272,7 @@ class Config:
             "max_size": self.app_settings["max_portfolio_size"],
             "risk_free_rate": self.app_settings["default_risk_free_rate"],
             "confidence_level": self.app_settings["default_confidence_level"],
-            "lookback_days": self.app_settings["default_lookback_days"]
+            "lookback_days": self.app_settings["default_lookback_days"],
         }
     
     def health_check(self) -> Dict[str, Any]:
@@ -282,10 +283,10 @@ class Config:
             "database_configured": bool(self.database.username),
             "redis_configured": bool(self.redis.host),
             "deribit_configured": bool(self.api.deribit_client_id),
-            "crypto_sectors_loaded": self.crypto_sectors is not None
+            "crypto_sectors_loaded": getattr(self, "crypto_sectors", None) is not None,
         }
         
-        if self.crypto_sectors:
+        if getattr(self, "crypto_sectors", None):
             health["total_sectors"] = len(self.get_all_sectors())
             health["total_tickers"] = len(self.crypto_sectors.get_all_tickers())
         
@@ -302,7 +303,7 @@ class Config:
             f"environment={self.app_settings['environment']}, "
             f"database={self.database.database}, "
             f"debug={self.app_settings['debug']}, "
-            f"sectors_loaded={self.crypto_sectors is not None}"
+            f"sectors_loaded={getattr(self, 'crypto_sectors', None) is not None}"
             f")"
         )
 
@@ -332,7 +333,7 @@ if __name__ == "__main__":
     print(f"🌐 Deribit URL: {config.api.deribit_rest_url}")
     
     # Crypto Sectors
-    if config.crypto_sectors:
+    if getattr(config, "crypto_sectors", None):
         print(f"\n📈 Crypto Sectors Loaded: ✅")
         print(f"📈 Total Sectors: {len(config.get_all_sectors())}")
         print(f"📈 Available Sectors: {', '.join(config.get_all_sectors())}")
@@ -352,3 +353,5 @@ if __name__ == "__main__":
     for key, value in health.items():
         status = "✅" if value else "❌"
         print(f"   {status} {key}: {value}")
+
+

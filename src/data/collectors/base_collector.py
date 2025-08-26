@@ -7,6 +7,7 @@
 Base data collector class for Qortfolio V2.
 Provides common functionality for all data collectors including
 rate limiting, retry logic, caching, and error handling.
+NO DEFAULT OR SAMPLE DATA - all data must be real.
 """
 
 import asyncio
@@ -24,15 +25,16 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-# Import our modules
-from ...core.config import config
-from ...core.exceptions import (
+# Import our modules - using absolute imports
+from src.core.config import config
+from src.core.exceptions import (
     DataCollectionError,
     APIConnectionError,
     RateLimitError,
-    ValidationError
+    ValidationError,
+    DatabaseOperationError
 )
-from ...core.database.connection import db_connection
+from src.core.database.connection import db_connection
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +53,7 @@ class CollectorStats:
     def success_rate(self) -> float:
         """Calculate success rate percentage."""
         if self.total_requests == 0:
-            return 0
+            return 100.0  # No requests yet, assume success
         return (self.successful_requests / self.total_requests) * 100
     
     @property
@@ -135,6 +137,7 @@ class BaseDataCollector(ABC):
     """
     Abstract base class for all data collectors.
     Provides common functionality like rate limiting, caching, and error handling.
+    NO DEFAULT DATA - all implementations must fetch real data.
     """
     
     def __init__(
@@ -184,8 +187,9 @@ class BaseDataCollector(ABC):
     @abstractmethod
     async def fetch_data(self, **kwargs) -> Any:
         """
-        Fetch data from the source.
+        Fetch REAL data from the source.
         Must be implemented by subclasses.
+        NO SAMPLE OR DEFAULT DATA.
         """
         pass
     
@@ -265,69 +269,29 @@ class BaseDataCollector(ABC):
             cached = self.cache[cache_key]
             
             # Check if cache is still valid
-# Replace lines 268-290 in base_collector.py with this corrected version
-    async def collect(self, use_cache: bool = True, **kwargs) -> Any:
-        """
-        Main method to collect data with all features.
+            if datetime.utcnow() < cached["expires_at"]:
+                self.stats.cache_hits += 1
+                logger.debug(f"Cache hit for key: {cache_key}")
+                return cached["data"]
+            else:
+                # Remove expired cache
+                del self.cache[cache_key]
         
-        Args:
-            use_cache: Whether to use cache for this request
-            **kwargs: Parameters to pass to fetch_data
-            
-        Returns:
-            Processed data
-            
-        Raises:
-            DataCollectionError: If data collection fails
-        """
-        start_time = time.time()
+        self.stats.cache_misses += 1
+        return None
+    
+    async def set_cached_data(self, cache_key: str, data: Any):
+        """Store data in cache with TTL."""
+        if not self.enable_cache:
+            return
         
-        try:
-            # Check cache first
-            cache_key = self._generate_cache_key(**kwargs)
-            if use_cache and self.enable_cache:
-                cached_data = await self.get_cached_data(cache_key)
-                if cached_data is not None:
-                    # Don't count cache hits as new requests
-                    return cached_data
-            
-            # This is a new request (not from cache)
-            self.stats.total_requests += 1
-            
-            # Apply rate limiting
-            await self._apply_rate_limit()
-            
-            # Fetch fresh data
-            logger.debug(f"Fetching data for {self.name} with params: {kwargs}")
-            raw_data = await self.fetch_data(**kwargs)
-            
-            # Validate data
-            if not await self.validate_data(raw_data):
-                raise ValidationError(f"Data validation failed for {self.name}")
-            
-            # Process data
-            processed_data = await self.process_data(raw_data)
-            
-            # Cache processed data
-            if use_cache and self.enable_cache:
-                await self.set_cached_data(cache_key, processed_data)
-            
-            # Update statistics
-            self.stats.successful_requests += 1
-            elapsed_ms = (time.time() - start_time) * 1000
-            self.stats.total_latency_ms += elapsed_ms
-            
-            logger.info(
-                f"Successfully collected data from {self.name} "
-                f"(elapsed: {elapsed_ms:.1f}ms)"
-            )
-            
-            return processed_data
-            
-        except Exception as e:
-            self.stats.failed_requests += 1
-            logger.error(f"Failed to collect data from {self.name}: {e}")
-            raise DataCollectionError(f"Collection failed for {self.name}: {e}")
+        self.cache[cache_key] = {
+            "data": data,
+            "expires_at": datetime.utcnow() + timedelta(seconds=self.cache_ttl),
+            "created_at": datetime.utcnow()
+        }
+        logger.debug(f"Cached data for key: {cache_key}")
+    
     def clear_cache(self):
         """Clear all cached data."""
         self.cache.clear()
@@ -345,7 +309,8 @@ class BaseDataCollector(ABC):
     @with_retry(max_retries=3, backoff_factor=1.0)
     async def collect(self, use_cache: bool = True, **kwargs) -> Any:
         """
-        Main method to collect data with all features.
+        Main method to collect REAL data with all features.
+        NO SAMPLE OR DEFAULT DATA.
         
         Args:
             use_cache: Whether to use cache for this request
@@ -358,7 +323,6 @@ class BaseDataCollector(ABC):
             DataCollectionError: If data collection fails
         """
         start_time = time.time()
-        self.stats.total_requests += 1
         
         try:
             # Check cache first
@@ -366,12 +330,16 @@ class BaseDataCollector(ABC):
             if use_cache and self.enable_cache:
                 cached_data = await self.get_cached_data(cache_key)
                 if cached_data is not None:
+                    # Cache hit - return cached data without counting as new request
                     return cached_data
+            
+            # This is a new request (not from cache)
+            self.stats.total_requests += 1
             
             # Apply rate limiting
             await self._apply_rate_limit()
             
-            # Fetch fresh data
+            # Fetch fresh REAL data (no defaults)
             logger.debug(f"Fetching data for {self.name} with params: {kwargs}")
             raw_data = await self.fetch_data(**kwargs)
             
@@ -429,7 +397,7 @@ class BaseDataCollector(ABC):
     
     async def store_data(self, collection_name: str, data: Union[Dict, List[Dict]]):
         """
-        Store collected data in MongoDB.
+        Store collected REAL data in MongoDB.
         
         Args:
             collection_name: Name of the MongoDB collection
@@ -472,6 +440,8 @@ if __name__ == "__main__":
     # This is an abstract class, cannot be instantiated directly
     print("✅ Base Data Collector module loaded successfully")
     print("This is an abstract base class for all data collectors.")
+    print("\nIMPORTANT: NO DEFAULT OR SAMPLE DATA")
+    print("All collectors must fetch REAL data from actual sources.")
     print("\nFeatures provided:")
     print("  - Rate limiting with token bucket algorithm")
     print("  - Retry logic with exponential backoff")
