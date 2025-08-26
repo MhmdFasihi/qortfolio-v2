@@ -1,0 +1,30 @@
+{
+    "DeFi": {
+        "tickers": ["UNI", "AAVE", "CRV", "MKR", "COMP", "SNX", "ETHFI", "LDO", "RPL", "PENDLE", "ENA", "XVS", "CVX", "CAKE", "JTO", "FRAX", "RAY", "ORCA", "BAL", "GMX", "RUNE", "DYDX", "ONDO", "LQTY", "MPL", "GFI", "CFG", "JUP", "HYPE"],
+        "yfinance": ["UNI7083", "AAVE", "CRV", "MKR", "COMP5692", "SNX", "ETHFI", "LDO", "RPL", "PENDLE", "ENA", "XVS", "CVX", "CAKE", "JTO", "FRAX", "RAY", "ORCA", "BAL", "GMX11857", "RUNE", "DYDX", "ONDO", "LQTY", "MPL", "GFI", "CFG", "JUP29210", "HYPE32196"]
+    },
+    "Digital Assets": {
+        "tickers": ["DOGE", "SAND", "AXS", "GALA", "ENJ", "MANA", "SHIB", "PEPE", "MEME", "TOKEN", "ORDI", "FLOKI", "ELON", "BONK", "WIF", "POPCAT", "MEW", "MOG", "BOME", "APU", "NPC", "GOAT", "YGG"],
+        "yfinance": ["DOGE", "SAND", "AXS", "GALA", "ENJ", "MANA", "SHIB", "PEPE24478", "MEME", "TOKEN28299", "ORDI", "FLOKI", "ELON", "BONK", "WIF", "POPCAT28782", "MEW30126", "MOG", "BOME", "APU30008", "NPC", "GOAT33440", "YGG"]
+    },
+    "Infrastructure": {
+        "tickers": ["ETH", "SOL", "ADA", "AVAX", "W", "AXL", "SYN", "LINK", "PYTH", "FLR", "NEAR", "MATIC", "ICP", "STX", "ATOM", "INJ", "FTM", "TIA", "ALGO", "FLOW", "QNT", "RON", "AIOZ", "IOTX", "IOTA", "ANT", "ANKR", "XRD", "SKL", "BICO", "FIL", "AR", "STORJ", "APT", "LPT"],
+        "yfinance": ["ETH", "SOL", "ADA", "AVAX", "W", "AXL17799", "SYN12147", "LINK", "PYTH", "FLR", "NEAR", "MATIC", "ICP", "STX4847", "ATOM", "INJ", "FTM", "TIA22861", "ALGO", "FLOW", "QNT", "RON14101", "AIOZ", "IOTX", "IOTA", "ANT", "ANKR", "XRD", "SKL", "BICO", "FIL", "AR", "STORJ", "APT21794", "LPT"]
+    },
+    "DApps": {
+        "tickers": ["LINK", "FIL", "GRT", "AR", "FET", "AKT", "HNT", "ICP", "OP", "ARB", "RENDER", "BLUR", "RUNE", "VET", "TON", "FRIEND", "TAO", "FLUX", "CTSI", "LIT", "PYTH"],
+        "yfinance": ["LINK", "FIL", "GRT6719", "AR", "FET", "AKT", "HNT", "ICP", "OP", "ARB11841", "RENDER", "BLUR", "RUNE", "VET", "TON", "FRIEND", "TAO22974", "FLUX", "CTSI", "LIT6833", "PYTH"]
+    },
+    "Privacy": {
+        "tickers": ["XMR", "MINA", "STRK", "ZEC", "DASH", "SCRT", "ZEN", "DUSK", "PHA", "KEEP", "NYM", "HOPR", "FIRO"],
+        "yfinance": ["XMR", "MINA", "STRK22691", "ZEC", "DASH", "SCRT", "ZEN", "DUSK", "PHA", "KEEP", "NYM", "HOPR", "FIRO"]
+    },
+    "Services": {
+        "tickers": ["XRP", "XLM", "NMR", "PENDLE", "ENA", "HBAR", "XTZ", "CHR", "ONDO", "BNB", "TRX", "RSS3", "AGI", "ABT", "ATH", "AI", "NMR", "ORAI", "GPU", "WLD", "GLM", "VIRTUAL", "GRASS"],
+        "yfinance": ["XRP", "XLM", "NMR", "PENDLE", "ENA", "HBAR", "XTZ", "CHR", "ONDO", "BNB", "TRX", "RSS3", "AGI", "ABT", "ATH30083", "AI28846", "NMR", "ORAI", "GPU", "WLD", "GLM", "VIRTUAL", "GRASS32956"]
+    },
+    "AI": {
+        "tickers": ["NEAR", "FET", "RLC", "0X0", "RENDER", "TAO", "GRT", "ARKM", "TRAC", "IO", "PAAL", "RSS3", "AGI", "ABT", "ATH", "AI", "NMR", "ORAI", "GPU", "WLD", "GLM", "VIRTUAL", "GRASS"],
+        "yfinance": ["NEAR", "FET", "RLC", "0X0", "RENDER", "TAO22974", "GRT6719", "ARKM", "TRAC", "IO29835", "PAAL", "RSS3", "AGI", "ABT", "ATH30083", "AI28846", "NMR", "ORAI", "GPU", "WLD", "GLM", "VIRTUAL", "GRASS32956"]
+    }
+}
