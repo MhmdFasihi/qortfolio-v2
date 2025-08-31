@@ -237,7 +237,7 @@ class CryptoCollector(BaseDataCollector):
             data = raw_data.copy()
             
             # Forward fill NaN values (common in crypto markets during low volume)
-            data = data.fillna(method='ffill').fillna(method='bfill')
+            data = data.ffill().bfill()
             
             # Drop any remaining rows with NaN
             data = data.dropna()
