@@ -197,7 +197,7 @@ class DeribitCollector(BaseDataCollector):
             params = {
                 "currency": currency,
                 "kind": kind,
-                "expired": expired
+                "expired": "false" if not expired else "true"
             }
             
             url = f"{self.base_url}/api/v2/public/get_instruments"
