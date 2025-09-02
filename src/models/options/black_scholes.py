@@ -21,7 +21,7 @@ from datetime import datetime, timedelta
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from src.core.utils.time_utils import calculate_time_to_maturity
+from src.core.utils.time_utils import TimeUtils
 
 logger = logging.getLogger(__name__)
 
