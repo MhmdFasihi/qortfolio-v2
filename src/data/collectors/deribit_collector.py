@@ -619,6 +619,22 @@ class DeribitCollector(BaseDataCollector):
         await super().close()
         logger.info("Closed Deribit collector")
 
+    # === Synchronous convenience ===
+    def get_options_data(self, currency: str = "BTC") -> List[Dict]:
+        """Synchronous helper to fetch processed options data.
+        Returns list of option documents as dictionaries.
+        """
+        try:
+            return asyncio.run(self.collect(currency=currency, kind="option", use_cache=True))
+        except RuntimeError:
+            # If an event loop is already running (e.g., within notebooks), create a new loop
+            loop = asyncio.new_event_loop()
+            try:
+                asyncio.set_event_loop(loop)
+                return loop.run_until_complete(self.collect(currency=currency, kind="option", use_cache=True))
+            finally:
+                loop.close()
+
 # === Testing ===
 
 async def test_deribit_collector():
