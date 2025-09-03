@@ -24,6 +24,16 @@ class DatabaseOperations:
     
     def __init__(self):
         self.connection = db_connection
+        # Provide sync DB handle for test compatibility
+        try:
+            self._db = self.connection.get_database()
+        except Exception:
+            self._db = None
+
+    @property
+    def db(self):
+        """Expose sync database handle if available (for tests)."""
+        return self._db
         
     # === Options Data Operations ===
     
