@@ -1,0 +1,20 @@
+---
+alwaysApply: true
+description: Data collection, scheduling, and storage practices
+---
+## Data Pipeline and Collectors
+
+- Collectors live in [src/data/collectors](mdc:src/data/collectors).
+- Use `DataManager` for orchestration and scheduling: [src/data/collectors/data_manager.py](mdc:src/data/collectors/data_manager.py).
+- Deribit and yfinance collectors must fetch REAL data (no defaults); validation required.
+- Respect rate limits and use built-in retry/backoff utilities in `BaseDataCollector`.
+- Store option/price data in MongoDB via the database layer.
+
+### Configuration
+- Crypto sectors mapping: [config/crypto_sectors.json](mdc:config/crypto_sectors.json) drives sector analytics and mappings.
+- App/global settings and secrets are sourced from environment variables; see [src/core/settings.py](mdc:src/core/settings.py).
+
+### Performance and indexing
+- Define and maintain indexes in the database layer; ensure time-series access patterns are efficient.
+- Prefer batch writes for high-frequency ingestion.
+

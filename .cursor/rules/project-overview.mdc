@@ -1,0 +1,39 @@
+---
+alwaysApply: true
+---
+## Qortfolio V2 — Project Overview and Entry Points
+
+This repository implements a professional quantitative finance platform centered on cryptocurrency options and portfolio analytics.
+
+- **Primary stack**: Python 3.11, Reflex.dev UI, MongoDB, optional Redis; packaged with Docker.
+- **Top-level run targets**:
+  - Reflex app: see [qortfolio_v2/qortfolio_v2.py](mdc:qortfolio_v2/qortfolio_v2.py) and [rxconfig.py](mdc:rxconfig.py)
+  - Alternative app source (src layout): [src/qortfolio/qortfolio.py](mdc:src/qortfolio/qortfolio.py)
+  - Docker compose: [docker-compose.yml](mdc:docker-compose.yml) and [Dockerfile](mdc:Dockerfile)
+
+### Directory landmarks
+- UI (Reflex):
+  - App: [qortfolio_v2/qortfolio_v2.py](mdc:qortfolio_v2/qortfolio_v2.py)
+  - Pages: [qortfolio_v2/pages/](mdc:qortfolio_v2/pages)
+  - State: [qortfolio_v2/state.py](mdc:qortfolio_v2/state.py)
+- Core library (src):
+  - Analytics/models/data/core: [src/](mdc:src)
+  - Data collectors: [src/data/collectors/](mdc:src/data/collectors)
+  - Database layer: [src/core/database/](mdc:src/core/database)
+- Config and assets:
+  - Crypto sectors: [config/crypto_sectors.json](mdc:config/crypto_sectors.json)
+  - Reflex config: [rxconfig.py](mdc:rxconfig.py)
+- Docs: [docs/](mdc:docs)
+
+### How the app starts
+- Local (dev): run `reflex run` from project root; Reflex discovers [rxconfig.py](mdc:rxconfig.py) and the main app.
+- Docker: `docker compose up qortfolio_app` uses [Dockerfile](mdc:Dockerfile) and [docker-compose.yml](mdc:docker-compose.yml) to run Reflex at port 3000 and MongoDB at 27017.
+
+### Data and persistence
+- MongoDB container and initialization live under [docker/mongodb/](mdc:docker/mongodb) with seed script [init-mongo.js](mdc:docker/mongodb/init-mongo.js).
+- Database operations and indexes are in [src/core/database](mdc:src/core/database).
+
+### Critical domain notes
+- Options analytics are crypto coin-settled; coefficients and Greeks should be adjusted accordingly (see models and analytics under [src/models](mdc:src/models) and [src/analytics](mdc:src/analytics)).
+- Time-to-maturity math must use 365.25 day-year basis; see [src/core/utils/time_utils.py](mdc:src/core/utils/time_utils.py).
+

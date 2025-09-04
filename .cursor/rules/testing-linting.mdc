@@ -1,0 +1,22 @@
+---
+alwaysApply: true
+globs: *.py
+description: Testing, coverage, and linting policies and commands
+---
+## Testing and Linting Policy
+
+### Commands
+- Run unit/integration tests: `pytest -q` (see [tests/](mdc:tests)).
+- Full run helper: [tests/run_complete_test.sh](mdc:tests/run_complete_test.sh).
+- Lint: `flake8` and `black --check .` and `isort --check-only .`.
+- Types: `mypy` on `src/` and `qortfolio_v2/`.
+
+### Gates before merging significant edits
+- No failing tests; prefer >= 80% coverage for changed files.
+- No new `flake8` errors; formatting passes Black/Isort checks.
+- Types pass for public APIs and new modules.
+
+### Data-dependent tests
+- Some tests require MongoDB running (Docker). If tests touch DB, ensure `docker compose up -d mongodb`.
+- No mocked defaults for Deribit/yfinance collectors—tests should validate real-data paths or be properly marked and skipped if offline.
+

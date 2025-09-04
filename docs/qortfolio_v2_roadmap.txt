@@ -1,0 +1,944 @@
+# Copyright (c) 2025 Seyed Mohammad Hossein Fasihi (Mhmd Fasihi)
+# This file is part of a project licensed under AGPLv3 or a commercial license.
+# AGPLv3: https://www.gnu.org/licenses/agpl-3.0.html
+# Contact for commercial licensing: mhmd.fasihi@gmail.com
+
+# Qortfolio V2 - Complete Development Roadmap
+
+## PROJECT OVERVIEW
+
+**Project Name:** Qortfolio V2 - Professional Quantitative Finance Platform  
+**Project Type:** Full-stack financial analytics platform with options trading analytics  
+**Development Timeline:** 8 weeks (56 days)  
+**Development Approach:** Agile with daily objectives and seamless Claude chat handoffs  
+
+### **Mission Statement**
+Transform cryptocurrency options and volatility analysis into a professional-grade platform combining real-time market data, advanced mathematical models, and AI-powered insights for quantitative traders and portfolio managers.
+
+### **Technology Stack**
+- **Frontend:** Reflex.dev (Python-based reactive web framework)
+- **Database:** MongoDB (Local + Cloud deployment)
+- **Risk Management:** riskfolio-lib, quantstats
+- **Containerization:** Docker + Docker Compose
+- **Package Management:** Support for both pip and conda
+- **Theme:** Dark royal purple with minimal emojis
+
+### **Value Proposition**
+- Real-time Options Analytics - BTC/ETH options with sub-second pricing updates
+- Advanced Volatility Intelligence - ML-powered forecasting with crypto sector analysis
+- Professional Risk Management - Modern portfolio theory with riskfolio-lib integration
+- Rule-based Strategy Suggestions - Initial phase with AI enhancement in later phases
+
+---
+
+## DEVELOPMENT PHASES OVERVIEW
+
+| Phase | Timeline | Focus Area | Key Deliverables | Success Metrics |
+|-------|----------|------------|------------------|-----------------|
+| **Phase 1** | Week 1-2 | Foundation + Database | Critical bug fixes, MongoDB setup, Reflex foundation | 100% bug elimination, DB operational |
+| **Phase 2** | Week 3-4 | Analytics + Database Integration | Options & volatility engines with DB persistence | Real-time data processing |
+| **Phase 3** | Week 5-6 | Advanced Analytics + Risk | Portfolio optimization with riskfolio-lib | Professional-grade calculations |
+| **Phase 4** | Week 7-8 | Polish + Deployment | Docker deployment, cloud DB migration | Production-ready platform |
+
+---
+
+## CRITICAL ISSUES & LEGACY BUGS
+
+### **IMMEDIATE PRIORITY - Week 1, Day 1**
+
+#### **Mathematical Time Calculation Bug** 
+**Legacy Problem:**
+```python
+# WRONG (from legacy repos):
+time_to_maturity = time_diff.total_seconds() / 31536000 * 365
+# This is mathematically incorrect!
+```
+
+**Correct Implementation:**
+```python
+# CORRECT (must implement):
+def calculate_time_to_maturity(current_time: datetime, expiry_time: datetime) -> float:
+    """
+    Calculate time to maturity in years using accurate calendar days
+    
+    Args:
+        current_time: Current timestamp
+        expiry_time: Option expiry timestamp
+        
+    Returns:
+        Time to maturity in years (float)
+    """
+    time_diff = expiry_time - current_time
+    # CRITICAL: Use exact calendar calculation
+    return time_diff.total_seconds() / (365.25 * 24 * 3600)
+```
+
+**Impact:** This bug affects ALL options pricing calculations, Greeks, and risk metrics.
+
+### **CRYPTO OPTIONS SPECIAL CONSIDERATIONS**
+
+#### **Coin-Based Settlement (CRITICAL)**
+**Deribit Cryptocurrency Options:**
+- **Premium is in base currency (BTC/ETH), NOT fiat (USD)**
+- **Settlement is coin-based, not cash-based**
+- **Example:** BTC call premium = 0.025 BTC (not $2,500 USD)
+
+```python
+# CRITICAL: Crypto options settlement
+# At expiry for BTC call:
+# Settlement in BTC = max(S_T - K, 0) / S_T
+# NOT max(S_T - K, 0) in USD
+```
+
+**Implications:**
+- Greeks calculations must account for coin-based settlement
+- Portfolio risk metrics need cryptocurrency denomination
+- PnL calculations are in crypto, then converted to USD for display
+
+---
+
+## PHASE 1: FOUNDATION (Week 1-2)
+**Mission:** Build bulletproof foundation with zero legacy bugs + Database + Reflex
+
+### **WEEK 1: CORE INFRASTRUCTURE + DATABASE**
+
+#### **Day 1-2: Project Setup, Database & Critical Bug Fix**
+**Session Duration:** 3-4 hours  
+**Priority:** CRITICAL  
+
+**Objectives:**
+1. **Fix Time Calculation Bug** 
+   - Implement mathematically correct time-to-maturity calculation
+   - Create comprehensive test suite with known benchmark values
+   - Validate against industry standard Black-Scholes implementations
+
+2. **MongoDB Database Setup**
+   ```python
+   # Database schema design for crypto options
+   collections = {
+       'options_data': {
+           'symbol': str,        # BTC-29MAR25-50000-C
+           'underlying': str,    # BTC, ETH
+           'strike': float,
+           'expiry': datetime,
+           'option_type': str,   # call, put
+           'premium_crypto': float,  # Premium in base currency
+           'premium_usd': float,     # Premium converted to USD
+           'bid_crypto': float,
+           'ask_crypto': float,
+           'volume': float,
+           'open_interest': float,
+           'implied_volatility': float,
+           'greeks': dict,
+           'timestamp': datetime
+       },
+       'price_data': {
+           'symbol': str,
+           'price_usd': float,
+           'volume_24h': float,
+           'timestamp': datetime,
+           'sector': str
+       },
+       'portfolio_data': {
+           'user_id': str,
+           'positions': list,
+           'allocation': dict,
+           'risk_metrics': dict,
+           'timestamp': datetime
+       }
+   }
+   ```
+
+3. **Docker Environment Setup**
+   ```yaml
+   # docker-compose.yml
+   version: '3.8'
+   services:
+     mongodb:
+       image: mongo:7.0
+       environment:
+         MONGO_INITDB_ROOT_USERNAME: admin
+         MONGO_INITDB_ROOT_PASSWORD: password
+       ports:
+         - "27017:27017"
+       volumes:
+         - mongodb_data:/data/db
+         
+     qortfolio-app:
+       build: .
+       depends_on:
+         - mongodb
+       ports:
+         - "3000:3000"
+       environment:
+         - MONGODB_URL=mongodb://admin:password@mongodb:27017/qortfolio
+   ```
+
+4. **Project Structure (Updated)**
+   ```
+   qortfolio-v2/
+   ├── src/
+   │   ├── qortfolio/              # Main Reflex app
+   │   │   ├── __init__.py
+   │   │   ├── qortfolio.py        # Main Reflex app file
+   │   │   ├── pages/              # Reflex pages
+   │   │   ├── components/         # Reflex components
+   │   │   └── state.py            # Reflex state management
+   │   ├── core/                   # Core utilities
+   │   │   ├── database/           # MongoDB connection and models
+   │   │   │   ├── connection.py
+   │   │   │   ├── models.py
+   │   │   │   └── operations.py
+   │   │   └── utils/
+   │   │       └── time_utils.py   # CRITICAL: Fixed time calculations
+   │   ├── data/                   # Data collection
+   │   ├── models/                 # Financial models
+   │   └── analytics/              # Analysis engines
+   ├── tests/
+   ├── config/
+   ├── requirements.txt            # pip dependencies
+   ├── environment.yml             # conda dependencies
+   ├── Dockerfile
+   ├── docker-compose.yml
+   └── pyproject.toml
+   ```
+
+**Acceptance Criteria:**
+- [ ] Project structure created correctly
+- [ ] Time calculation bug fixed and tested
+- [ ] MongoDB running in Docker
+- [ ] Reflex app foundation operational
+- [ ] Database models defined
+- [ ] Both pip and conda support
+
+---
+
+#### **Day 3-5: Data Collection + Database Integration**
+**Session Duration:** 4-5 hours  
+**Priority:** HIGH  
+
+**Objectives:**
+1. **Crypto Sectors Configuration (Using crypto_sectors.json)**
+   ```python
+   # src/core/config/crypto_sectors.py
+   CRYPTO_SECTORS = {
+       "DeFi": {
+           "tickers": ["UNI", "AAVE", "CRV", "MKR", "COMP", "SNX"],
+           "yfinance": ["UNI7083", "AAVE", "CRV", "MKR", "COMP5692", "SNX"]
+       },
+       "Infrastructure": {
+           "tickers": ["ETH", "SOL", "ADA", "AVAX", "LINK"],
+           "yfinance": ["ETH", "SOL", "ADA", "AVAX", "LINK"]
+       },
+       "AI": {
+           "tickers": ["NEAR", "FET", "RLC", "RENDER", "TAO"],
+           "yfinance": ["NEAR", "FET", "RLC", "RENDER", "TAO22974"]
+       }
+       # ... other sectors from crypto_sectors.json
+   }
+   ```
+
+2. **Deribit API Integration with Database Storage**
+   ```python
+   # src/data/collectors/deribit_collector.py
+   class DeribitCollector:
+       def __init__(self, db_connection):
+           self.db = db_connection
+           self.websocket_url = "wss://www.deribit.com/ws/api/v2"
+           
+       async def collect_and_store_options_data(self, currency: str = "BTC"):
+           """
+           Collect real-time options data and store in MongoDB
+           CRITICAL: Handle coin-based premiums correctly
+           """
+           options_data = await self.fetch_options_data(currency)
+           
+           for option in options_data:
+               # CRITICAL: Premium is in base currency
+               option_doc = {
+                   'symbol': option['instrument_name'],
+                   'underlying': currency,
+                   'premium_crypto': option['mark_price'],  # In BTC/ETH
+                   'premium_usd': option['mark_price'] * option['underlying_price'],
+                   'strike': option['strike'],
+                   'expiry': self.parse_expiry(option['expiration_timestamp']),
+                   'implied_volatility': option.get('mark_iv'),
+                   'timestamp': datetime.utcnow()
+               }
+               
+               await self.db.options_data.insert_one(option_doc)
+   ```
+
+3. **yfinance Integration with Sector Mapping**
+   ```python
+   # src/data/collectors/crypto_collector.py
+   class CryptoCollector:
+       def __init__(self, db_connection):
+           self.db = db_connection
+           self.sectors = CRYPTO_SECTORS
+           
+       def collect_sector_data(self, sector_name: str):
+           """Collect data for entire crypto sector"""
+           sector_config = self.sectors[sector_name]
+           
+           for ticker, yf_ticker in zip(sector_config['tickers'], sector_config['yfinance']):
+               data = yf.download(f"{yf_ticker}-USD", period="2y")
+               
+               # Store in MongoDB
+               for date, row in data.iterrows():
+                   price_doc = {
+                       'symbol': ticker,
+                       'yfinance_symbol': yf_ticker,
+                       'sector': sector_name,
+                       'price_usd': row['Close'],
+                       'volume_24h': row['Volume'],
+                       'timestamp': date
+                   }
+                   
+                   self.db.price_data.insert_one(price_doc)
+   ```
+
+**Acceptance Criteria:**
+- [ ] MongoDB integration working
+- [ ] Crypto sectors data loading from existing JSON structure
+- [ ] Deribit options data storing correctly (coin-based premiums)
+- [ ] yfinance crypto data collection operational
+- [ ] Database queries optimized for real-time access
+
+---
+
+### **WEEK 2: REFLEX DASHBOARD + ANALYTICS FOUNDATION**
+
+#### **Day 1-3: Reflex Dashboard Setup**
+**Session Duration:** 4-5 hours  
+**Priority:** HIGH  
+
+**Objectives:**
+1. **Reflex App Structure**
+   ```python
+   # src/qortfolio/qortfolio.py
+   import reflex as rx
+   from .state import QortfolioState
+   from .pages import options_page, volatility_page, portfolio_page
+   
+   # Dark royal purple theme
+   theme = {
+       "primary_color": "#4C1D95",      # Dark purple
+       "secondary_color": "#7C3AED",    # Medium purple  
+       "background_color": "#1F1B24",   # Very dark purple
+       "text_color": "#E5E7EB",         # Light gray
+       "accent_color": "#A855F7"        # Bright purple
+   }
+   
+   def index() -> rx.Component:
+       return rx.vstack(
+           rx.heading("Qortfolio V2 - Quantitative Finance Platform", size="2xl"),
+           rx.hstack(
+               rx.link("Options Analytics", href="/options"),
+               rx.link("Volatility Analysis", href="/volatility"), 
+               rx.link("Portfolio Management", href="/portfolio"),
+               spacing="4"
+           ),
+           spacing="8",
+           padding="4"
+       )
+   
+   app = rx.App(theme=rx.theme(appearance="dark", **theme))
+   app.add_page(index, route="/")
+   app.add_page(options_page, route="/options")
+   app.add_page(volatility_page, route="/volatility")
+   app.add_page(portfolio_page, route="/portfolio")
+   ```
+
+2. **Database-Connected State Management**
+   ```python
+   # src/qortfolio/state.py
+   import reflex as rx
+   from typing import List, Dict
+   from ..core.database.operations import DatabaseOperations
+   
+   class QortfolioState(rx.State):
+       # Options data
+       options_data: List[Dict] = []
+       selected_currency: str = "BTC"
+       
+       # Portfolio data
+       portfolio_allocation: Dict = {}
+       risk_metrics: Dict = {}
+       
+       # Database connection
+       def __init__(self):
+           super().__init__()
+           self.db = DatabaseOperations()
+           
+       async def load_options_data(self):
+           """Load options data from MongoDB"""
+           self.options_data = await self.db.get_latest_options_data(
+               currency=self.selected_currency
+           )
+           
+       async def update_portfolio_allocation(self, allocation: Dict):
+           """Update portfolio allocation in database"""
+           await self.db.store_portfolio_allocation(
+               user_id="default",
+               allocation=allocation
+           )
+           self.portfolio_allocation = allocation
+   ```
+
+**Acceptance Criteria:**
+- [ ] Reflex app running with dark royal purple theme
+- [ ] Multi-page navigation working
+- [ ] Database integration in state management
+- [ ] Real-time data updates functional
+- [ ] Responsive design for different screen sizes
+
+---
+
+#### **Day 4-5: Black-Scholes Engine + Greeks (Coin-Based)**
+**Session Duration:** 3-4 hours  
+**Priority:** CRITICAL  
+
+**Objectives:**
+1. **Coin-Based Black-Scholes Implementation**
+   ```python
+   # src/models/options/crypto_black_scholes.py
+   class CryptoBlackScholesEngine:
+       """
+       Black-Scholes engine for cryptocurrency options
+       CRITICAL: Handles coin-based settlement
+       """
+       
+       def calculate_crypto_option_price(self, 
+                                       S: float,      # Underlying price (USD)
+                                       K: float,      # Strike price (USD)
+                                       T: float,      # Time to maturity (FIXED)
+                                       r: float,      # Risk-free rate
+                                       sigma: float,  # Implied volatility
+                                       option_type: str = "call") -> Dict[str, float]:
+           """
+           Calculate crypto option price with coin-based settlement
+           
+           CRITICAL: Premium is returned in base currency (BTC/ETH)
+           Formula adjustments for coin settlement:
+           - Call premium in BTC = C_usd / S
+           - Put premium in BTC = P_usd / S
+           """
+           
+           # Standard Black-Scholes calculation (USD)
+           price_usd = self._calculate_standard_bs(S, K, T, r, sigma, option_type)
+           
+           # Convert to coin-based premium
+           premium_crypto = price_usd / S
+           
+           # Calculate Greeks (adjusted for coin settlement)
+           greeks = self._calculate_crypto_greeks(S, K, T, r, sigma, option_type)
+           
+           return {
+               'premium_usd': price_usd,
+               'premium_crypto': premium_crypto,
+               'greeks': greeks
+           }
+   ```
+
+**Mathematical Formulas for Crypto Options:**
+```
+Standard Call Premium (USD): C = S*N(d1) - K*e^(-rT)*N(d2)
+Crypto Call Premium (BTC): C_crypto = C_usd / S
+
+Delta (Crypto): Δ_crypto = N(d1) - C_crypto/S
+Gamma (Crypto): Γ_crypto = φ(d1)/(S²*σ*√T) - 2*C_crypto/S²
+```
+
+**Acceptance Criteria:**
+- [ ] Crypto Black-Scholes engine producing accurate prices
+- [ ] Coin-based premium calculations correct
+- [ ] Greeks adjusted for cryptocurrency settlement
+- [ ] Integration with MongoDB for price storage
+- [ ] Validation against Deribit market prices
+
+---
+
+## PHASE 2: ANALYTICS ENGINES (Week 3-4)
+**Mission:** Implement professional-grade analytics with database persistence
+
+### **WEEK 3: OPTIONS ANALYTICS + REFLEX INTEGRATION**
+
+#### **Day 1-3: Advanced Options Analytics**
+**Session Duration:** 4-5 hours  
+**Priority:** HIGH  
+
+**Objectives:**
+1. **Volatility Surfaces with Database Storage**
+   ```python
+   # src/analytics/volatility/surface_builder.py
+   class VolatilitySurfaceBuilder:
+       def __init__(self, db_connection):
+           self.db = db_connection
+           
+       async def build_and_store_surface(self, currency: str) -> Dict:
+           """
+           Build volatility surface and store in MongoDB
+           """
+           # Fetch options data from database
+           options_data = await self.db.get_options_by_currency(currency)
+           
+           # Build surface
+           surface = self._construct_surface(options_data)
+           
+           # Store surface in database
+           surface_doc = {
+               'currency': currency,
+               'surface_data': surface,
+               'timestamp': datetime.utcnow()
+           }
+           
+           await self.db.volatility_surfaces.insert_one(surface_doc)
+           
+           return surface
+   ```
+
+2. **Reflex Options Analytics Page**
+   ```python
+   # src/qortfolio/pages/options_page.py
+   import reflex as rx
+   from ..state import QortfolioState
+   
+   def options_analytics_page() -> rx.Component:
+       return rx.vstack(
+           rx.heading("Options Analytics", size="xl"),
+           
+           # Currency selector
+           rx.select(
+               ["BTC", "ETH"],
+               value=QortfolioState.selected_currency,
+               on_change=QortfolioState.set_selected_currency
+           ),
+           
+           # Options chain table
+           rx.data_table(
+               data=QortfolioState.options_data,
+               columns=["symbol", "strike", "premium_crypto", "premium_usd", "iv"],
+               pagination=True
+           ),
+           
+           # Volatility surface plot
+           rx.plotly(
+               data=QortfolioState.volatility_surface_data,
+               layout={"title": "Implied Volatility Surface"}
+           ),
+           
+           spacing="6",
+           padding="4"
+       )
+   ```
+
+**Acceptance Criteria:**
+- [ ] Volatility surfaces rendering in Reflex
+- [ ] Real-time options chain display
+- [ ] Database persistence for all analytics
+- [ ] Interactive charts working smoothly
+- [ ] Coin-based premium display
+
+---
+
+### **WEEK 4: RISK ANALYTICS WITH RISKFOLIO-LIB**
+
+#### **Day 1-3: Risk Management Integration**
+**Session Duration:** 4-5 hours  
+**Priority:** HIGH  
+
+**Objectives:**
+1. **Riskfolio-lib Integration**
+   ```python
+   # src/analytics/risk/portfolio_risk.py
+   import riskfolio as rp
+   import quantstats as qs
+   
+   class PortfolioRiskAnalyzer:
+       def __init__(self, db_connection):
+           self.db = db_connection
+           
+       async def calculate_portfolio_metrics(self, portfolio_id: str) -> Dict:
+           """
+           Calculate comprehensive risk metrics using riskfolio-lib
+           """
+           # Fetch portfolio data from database
+           portfolio_data = await self.db.get_portfolio_data(portfolio_id)
+           returns_data = await self.db.get_returns_data(portfolio_data['assets'])
+           
+           # Create riskfolio Portfolio object
+           port = rp.Portfolio(returns=returns_data)
+           port.assets_stats(method_mu='hist', method_cov='hist')
+           
+           # Calculate risk metrics
+           metrics = {
+               'var_95': port.var_hist(returns_data, alpha=0.05),
+               'cvar_95': port.cvar_hist(returns_data, alpha=0.05),
+               'max_drawdown': qs.stats.max_drawdown(returns_data),
+               'sharpe_ratio': qs.stats.sharpe(returns_data),
+               'calmar_ratio': qs.stats.calmar(returns_data)
+           }
+           
+           # Store metrics in database
+           await self.db.store_risk_metrics(portfolio_id, metrics)
+           
+           return metrics
+   ```
+
+2. **QuantStats Integration**
+   ```python
+   # src/analytics/performance/quantstats_analyzer.py
+   class QuantStatsAnalyzer:
+       def generate_performance_report(self, returns: pd.Series) -> Dict:
+           """
+           Generate comprehensive performance report using QuantStats
+           """
+           return {
+               'total_return': qs.stats.comp(returns),
+               'annual_return': qs.stats.cagr(returns), 
+               'volatility': qs.stats.volatility(returns),
+               'max_drawdown': qs.stats.max_drawdown(returns),
+               'sharpe': qs.stats.sharpe(returns),
+               'sortino': qs.stats.sortino(returns),
+               'calmar': qs.stats.calmar(returns),
+               'omega': qs.stats.omega(returns)
+           }
+   ```
+
+**Acceptance Criteria:**
+- [ ] Riskfolio-lib integration working
+- [ ] QuantStats performance metrics calculated
+- [ ] Risk metrics stored in MongoDB
+- [ ] Real-time risk monitoring operational
+- [ ] Portfolio optimization using riskfolio algorithms
+
+---
+
+## PHASE 3: ADVANCED FEATURES (Week 5-6)
+**Mission:** Professional portfolio management and strategy suggestions
+
+### **WEEK 5: PORTFOLIO OPTIMIZATION**
+
+#### **Day 1-3: Sector-Based Allocation**
+**Session Duration:** 4-5 hours  
+**Priority:** HIGH  
+
+**Objectives:**
+1. **HRP/HERC with Crypto Sectors**
+   ```python
+   # src/models/portfolio/sector_allocation.py
+   class SectorBasedAllocation:
+       def __init__(self, db_connection):
+           self.db = db_connection
+           self.crypto_sectors = CRYPTO_SECTORS
+           
+       async def calculate_hrp_allocation(self) -> Dict:
+           """
+           Calculate HRP allocation using crypto sectors from database
+           """
+           # Fetch sector returns from database
+           sector_returns = {}
+           for sector_name, config in self.crypto_sectors.items():
+               returns = await self.db.get_sector_returns(sector_name)
+               sector_returns[sector_name] = returns
+           
+           # Use riskfolio for HRP calculation
+           port = rp.Portfolio(returns=pd.DataFrame(sector_returns))
+           w_hrp = port.optimization(model='HRP', rm='MV', obj='Sharpe')
+           
+           return w_hrp.to_dict()
+   ```
+
+**Acceptance Criteria:**
+- [ ] Sector-based allocation using crypto_sectors.json structure
+- [ ] HRP/HERC algorithms implemented with riskfolio-lib
+- [ ] Portfolio data persistence in MongoDB
+- [ ] Real-time rebalancing suggestions
+- [ ] Risk budgeting across crypto sectors
+
+---
+
+#### **Day 4-5: Strategy Suggestions (Rule-Based)**
+**Session Duration:** 3-4 hours  
+**Priority:** MEDIUM  
+
+**Objectives:**
+1. **Rule-Based Strategy Engine**
+   ```python
+   # src/analytics/strategies/rule_based_strategies.py
+   class RuleBasedStrategyEngine:
+       """
+       Initial phase: Rule-based strategy suggestions
+       Future phases: AI-enhanced suggestions
+       """
+       
+       def suggest_options_strategies(self, 
+                                    options_chain: pd.DataFrame,
+                                    spot_price: float,
+                                    volatility_forecast: float) -> List[Dict]:
+           """
+           Suggest options strategies based on market conditions
+           """
+           strategies = []
+           
+           # High volatility → Sell premium strategies
+           if volatility_forecast > 0.6:  # 60% annual vol
+               strategies.append({
+                   'strategy': 'Short Strangle',
+                   'reasoning': 'High implied volatility detected',
+                   'implementation': self._build_short_strangle(options_chain, spot_price)
+               })
+           
+           # Low volatility → Buy premium strategies  
+           elif volatility_forecast < 0.3:  # 30% annual vol
+               strategies.append({
+                   'strategy': 'Long Straddle',
+                   'reasoning': 'Low volatility with potential breakout',
+                   'implementation': self._build_long_straddle(options_chain, spot_price)
+               })
+           
+           return strategies
+   ```
+
+**Acceptance Criteria:**
+- [ ] Rule-based strategy suggestions working
+- [ ] Integration with options chain data
+- [ ] Strategy recommendations stored in database
+- [ ] Performance tracking of suggested strategies
+- [ ] Foundation prepared for AI enhancement in later phases
+
+---
+
+## PHASE 4: DEPLOYMENT & CLOUD (Week 7-8)
+**Mission:** Production deployment with cloud database migration
+
+### **WEEK 7: DOCKER DEPLOYMENT**
+
+#### **Day 1-3: Production Docker Setup**
+**Session Duration:** 3-4 hours  
+**Priority:** HIGH  
+
+**Objectives:**
+1. **Production Docker Configuration**
+   ```yaml
+   # docker-compose.prod.yml
+   version: '3.8'
+   services:
+     qortfolio-app:
+       build:
+         context: .
+         dockerfile: Dockerfile.prod
+       ports:
+         - "80:3000"
+       environment:
+         - MONGODB_URL=${MONGODB_CLOUD_URL}
+         - ENVIRONMENT=production
+       depends_on:
+         - mongodb
+         
+     mongodb:
+       image: mongo:7.0
+       volumes:
+         - mongodb_data:/data/db
+       environment:
+         MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
+         MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+   ```
+
+2. **Cloud MongoDB Migration**
+   ```python
+   # src/core/database/cloud_migration.py
+   class CloudMigration:
+       async def migrate_to_cloud(self, cloud_connection_string: str):
+           """
+           Migrate local MongoDB data to cloud instance
+           """
+           # Connect to both local and cloud instances
+           local_db = self.get_local_connection()
+           cloud_db = self.get_cloud_connection(cloud_connection_string)
+           
+           # Migrate collections
+           collections = ['options_data', 'price_data', 'portfolio_data']
+           for collection_name in collections:
+               await self._migrate_collection(local_db, cloud_db, collection_name)
+   ```
+
+**Acceptance Criteria:**
+- [ ] Docker production deployment working
+- [ ] Cloud MongoDB connection established
+- [ ] Data migration from local to cloud completed
+- [ ] Environment-based configuration
+- [ ] SSL/TLS security implemented
+
+---
+
+### **WEEK 8: FINAL POLISH & MONITORING**
+
+#### **Day 1-3: Performance Optimization**
+**Session Duration:** 3-4 hours  
+**Priority:** MEDIUM  
+
+**Objectives:**
+1. **Database Performance Optimization**
+   ```python
+   # Optimized database indexes
+   indexes = {
+       'options_data': [
+           ('symbol', 1),
+           ('underlying', 1, 'timestamp', -1),
+           ('expiry', 1)
+       ],
+       'price_data': [
+           ('symbol', 1, 'timestamp', -1),
+           ('sector', 1)
+       ]
+   }
+   ```
+
+2. **Reflex Performance Tuning**
+   ```python
+   # Optimized state management
+   class OptimizedQortfolioState(rx.State):
+       # Use computed vars for expensive calculations
+       @rx.computed_var
+       def portfolio_performance(self) -> Dict:
+           return self._calculate_portfolio_metrics()
+           
+       # Implement caching for database queries
+       @lru_cache(maxsize=100)
+       def get_cached_options_data(self, currency: str) -> List[Dict]:
+           return self.db.get_options_data(currency)
+   ```
+
+**Acceptance Criteria:**
+- [ ] Database queries optimized with proper indexing
+- [ ] Reflex app performance tuned for real-time updates
+- [ ] Caching implemented for expensive calculations
+- [ ] Memory usage optimized
+- [ ] Load testing completed
+
+---
+
+#### **Day 4-5: Documentation & Handoff**
+**Session Duration:** 2-3 hours  
+**Priority:** LOW  
+
+**Objectives:**
+1. **Complete Documentation**
+   - User guide for Reflex interface
+   - Database schema documentation
+   - Docker deployment instructions
+   - API reference for future development
+
+2. **Monitoring Setup**
+   - Application performance monitoring
+   - Database monitoring
+   - Error tracking and alerting
+
+**Acceptance Criteria:**
+- [ ] Documentation comprehensive
+- [ ] Monitoring operational
+- [ ] Ready for production deployment
+- [ ] Handoff to operations team complete
+
+---
+
+## HANDOFF PROTOCOL FOR CLAUDE CHATS
+
+### **Starting New Claude Chat - Standard Process**
+
+#### **Context Loading Message Template**
+```
+Hi Claude! I'm continuing Qortfolio V2 development. Please review:
+
+1. QORTFOLIO_V2_COMPLETE_ROADMAP.md - for current phase/week/day
+2. CURRENT_STATUS.md - for last completed tasks  
+3. FEATURE_REQUIREMENTS.md - for scope validation
+
+Current Context:
+- Phase: [X] (Foundation/Analytics/Advanced/Polish)
+- Week: [Y] 
+- Day: [Z]
+- Last Completed: [specific task/feature]
+- Next Priority: [specific next task from roadmap]
+
+CRITICAL FOCUS AREAS:
+1. DATABASE (MongoDB integration)
+2. REFLEX (dashboard development) 
+3. Coin-based options pricing
+4. Time calculation bug fix
+
+Please confirm:
+1. Current phase/week/day understood
+2. Next specific task identified  
+3. Database and Reflex priorities noted
+4. Ready to proceed with development
+```
+
+### **Session Completion Protocol**
+```markdown
+## Session Complete - Day [X]
+
+### Completed This Session:
+- [x] [Specific task] - [Result/Notes]
+- [x] [Database integration aspect]
+- [x] [Reflex development aspect]
+
+### Database Status:
+- MongoDB connection: [Working/Issues]
+- Collections created: [List]
+- Data persistence: [Operational/Issues]
+
+### Reflex Status:
+- App running: [Yes/No]
+- Pages implemented: [List]
+- Theme applied: [Dark royal purple/Issues]
+
+### Next Session Priority:
+- [Specific next task from roadmap]
+- [Database requirements]
+- [Reflex development needs]
+```
+
+---
+
+## SUCCESS VALIDATION CRITERIA
+
+### **Phase Completion Gates**
+
+#### **Phase 1 Complete (Week 2 End):**
+- [ ] Time calculation bug 100% fixed and tested
+- [ ] MongoDB operational with schema defined
+- [ ] Reflex app foundation working with dark royal purple theme
+- [ ] Docker environment setup complete
+- [ ] Deribit data collection storing coin-based premiums correctly
+
+#### **Phase 2 Complete (Week 4 End):**
+- [ ] Options analytics integrated with database
+- [ ] Volatility surfaces rendering in Reflex
+- [ ] Risk metrics calculated with riskfolio-lib
+- [ ] Real-time data updates through Reflex state management
+
+#### **Phase 3 Complete (Week 6 End):**
+- [ ] Portfolio optimization using crypto sectors
+- [ ] Rule-based strategy suggestions operational
+- [ ] Complete risk management suite with quantstats
+- [ ] All analytics data persisted in MongoDB
+
+#### **Phase 4 Complete (Week 8 End):**
+- [ ] Docker production deployment ready
+- [ ] Cloud MongoDB migration completed
+- [ ] Performance optimized for production use
+- [ ] Documentation and monitoring complete
+
+### **Technical Excellence Metrics**
+- **Database Performance:** Query response time <100ms
+- **Reflex Performance:** Page load time <2 seconds
+- **Options Pricing Accuracy:** Within ±0.1% of Deribit prices
+- **Risk Calculations:** riskfolio-lib integration 100% functional
+- **Docker Deployment:** One-command deployment working
+
+---
+
+**This roadmap ensures systematic development with DATABASE and REFLEX as core priorities, supporting both pip and conda environments, and delivering a production-ready quantitative finance platform with coin-based crypto options analytics.**

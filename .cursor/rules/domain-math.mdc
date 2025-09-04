@@ -1,0 +1,18 @@
+---
+alwaysApply: true
+description: Domain math constraints for crypto options and time basis
+---
+## Domain Math Constraints
+
+### Time-to-maturity basis
+- Always use a 365.25-day year basis for time-to-maturity in years.
+- Reference implementation: [src/core/utils/time_utils.py](mdc:src/core/utils/time_utils.py) `TimeUtils.calculate_time_to_maturity`.
+
+### Crypto options (coin-settled)
+- Premiums and Greeks must account for coin settlement.
+- Relationship: `premium_crypto = premium_usd / S` where `S` is spot price in USD.
+- Adjusted Greeks (crypto terms) are scaled/divided by `S` and account for premium terms (see options models/analytics under [src/models](mdc:src/models) and [src/analytics](mdc:src/analytics)).
+
+### Display
+- Show both USD and crypto-denominated premium/metrics where relevant; store both in DB when persisting.
+

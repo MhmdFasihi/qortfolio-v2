@@ -1,0 +1,24 @@
+---
+alwaysApply: true
+description: Deployment, Docker, and environment configuration rules
+---
+## Deployment and Environment Configuration
+
+### Local
+- Use `reflex run` at project root (discovers [rxconfig.py](mdc:rxconfig.py)).
+- Provide env via shell or `.env` (see `MONGODB_URL`, `DERIBIT_CLIENT_ID/SECRET`, `REDIS_*`).
+
+### Docker
+- Services declared in [docker-compose.yml](mdc:docker-compose.yml). App service is `qortfolio_app`.
+- Typical dev run: `docker compose up -d mongodb redis` then `docker compose up --build qortfolio_app`.
+- Dockerfile exposes port 3000; app serves Reflex on 3000.
+
+### Environment variables
+- Database: `MONGODB_URL` or `MONGO_*` vars (host, port, user, password, database).
+- Redis: `REDIS_URL` or `REDIS_*` vars.
+- APIs: `DERIBIT_CLIENT_ID`, `DERIBIT_CLIENT_SECRET`, `YFINANCE_RATE_LIMIT`.
+- App: `ENVIRONMENT`, `DEBUG`, `LOG_LEVEL`, `REFLEX_HOST`, `REFLEX_PORT`.
+
+### Config loading
+- Centralized in [src/core/settings.py](mdc:src/core/settings.py). Prefer reading env there and passing structured config to consumers.
+

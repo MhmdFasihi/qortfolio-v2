@@ -1,0 +1,27 @@
+---
+alwaysApply: true
+description: MongoDB time-series usage, collections, and indexing policies
+---
+## Database and Indexing Rules
+
+### Connection and config
+- Connection utilities live in [src/core/database/connection.py](mdc:src/core/database/connection.py).
+- Operations in [src/core/database/operations.py](mdc:src/core/database/operations.py). Add or change indexes here.
+
+### Collections and time-series
+- Use time-series collections for high-frequency or time-stamped data.
+- Options data: collection name `options_data` with `timestamp` as time field and `underlying` as meta field.
+- Crypto prices: `crypto_prices` keyed by `symbol` and `timestamp`.
+- Risk metrics: `risk_metrics` keyed by `portfolio_id` and `calculation_timestamp`.
+
+### Required indexes (minimum)
+- `options_data`: compound indexes on `(underlying, timestamp desc)` and `(symbol, timestamp desc)`.
+- `crypto_prices`: `(symbol, timestamp desc)`.
+- `portfolio_data`: `(user_id, portfolio_id, timestamp desc)`.
+- `risk_metrics`: `(portfolio_id, calculation_timestamp desc)`.
+
+### Performance practices
+- Prefer batch writes for ingestion; avoid per-document round trips where possible.
+- Scope queries by `underlying/symbol` and time ranges.
+- Keep index set minimal but sufficient; avoid redundant overlapping indexes.
+

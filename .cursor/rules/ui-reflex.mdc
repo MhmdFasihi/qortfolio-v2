@@ -1,0 +1,29 @@
+---
+alwaysApply: true
+description: Reflex UI structure, routing, state, and theming conventions
+---
+## UI / Reflex Structure and Conventions
+
+### App entry and routing
+- Primary app: [qortfolio_v2/qortfolio_v2.py](mdc:qortfolio_v2/qortfolio_v2.py). Add pages with `app.add_page(fn, route=..., title=..., on_load=...)`.
+- Reflex auto-discovers [rxconfig.py](mdc:rxconfig.py). Run via `reflex run`.
+- Keep routes stable: `/` dashboard, `/options` options analytics. Add new routes under `qortfolio_v2/pages/` and register them in the main app.
+
+### Pages, components, and state
+- Pages live in [qortfolio_v2/pages](mdc:qortfolio_v2/pages). Keep each page as a small composition function returning `rx.Component`.
+- Shared state in [qortfolio_v2/state.py](mdc:qortfolio_v2/state.py). Prefer async data loads via `on_load` to avoid blocking render.
+- Reusable UI belongs in `qortfolio_v2/components/` (cards, tables, nav). Avoid duplicating styling across pages.
+
+### Theming and styles
+- Use dark theme with purple accent: `rx.theme(appearance="dark", accent_color="purple")`.
+- Centralize theme and colors (if extended) in a dedicated styles module; avoid inline color codes except for minor accents.
+- Keep layout responsive: prefer `rx.vstack`, `rx.hstack`, `rx.grid` with sensible `spacing`, `width`, and `max_width`.
+
+### Data flow
+- UI triggers state methods; state interacts with database/collectors via the src layer. No direct DB calls in pages.
+- For expensive computations, use computed vars/caching in state or pre-compute in the backend layer.
+
+### Performance
+- Avoid large lists without pagination/virtualization.
+- Defer heavy loads using `on_load` and show loading indicators if needed.
+

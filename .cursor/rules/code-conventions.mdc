@@ -1,0 +1,19 @@
+---
+alwaysApply: true
+globs: *.py
+---
+## Code Conventions (Python)
+
+- Use explicit type hints for public APIs and function signatures.
+- Prefer descriptive names (avoid 1–2 char identifiers). Variables are nouns; functions are verbs.
+- Use guard clauses and shallow nesting; avoid bare `except`.
+- Keep comments focused on rationale; avoid trivial inline comments.
+- Match existing formatting; do not reformat unrelated code.
+- Long lines: wrap for readability; avoid complex one-liners/ternaries.
+- Do not introduce TODO comments for required fixes—implement instead.
+- Ensure tests and linters pass before committing.
+
+### Domain constraints
+- Options time-to-maturity must use 365.25-day year basis. See [src/core/utils/time_utils.py](mdc:src/core/utils/time_utils.py).
+- Crypto options are coin-settled; Greeks and premiums must account for `premium_crypto = premium_usd / S`.
+

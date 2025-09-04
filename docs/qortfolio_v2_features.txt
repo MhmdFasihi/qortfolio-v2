@@ -1,0 +1,1413 @@
+# Copyright (c) 2025 Seyed Mohammad Hossein Fasihi (Mhmd Fasihi)
+# This file is part of a project licensed under AGPLv3 or a commercial license.
+# AGPLv3: https://www.gnu.org/licenses/agpl-3.0.html
+# Contact for commercial licensing: mhmd.fasihi@gmail.com
+
+# Qortfolio V2 - Complete Features List & Bottleneck Analysis
+
+## PROJECT SCOPE OVERVIEW
+
+**Platform Type:** Professional Quantitative Finance Analytics Platform  
+**Target Market:** Quantitative traders, portfolio managers, institutional investors  
+**Core Assets:** BTC/ETH Options + Crypto Sector Analysis (using crypto_sectors.json)  
+**Architecture:** Reflex.dev Dashboard + MongoDB Database + Docker Deployment  
+**Data Sources:** Deribit API (Options) + yfinance (Historical Prices)  
+**Package Management:** Both pip and conda support
+
+### **Technology Stack**
+- **Frontend:** Reflex.dev (Python-based reactive web framework)
+- **Database:** MongoDB (Local development + Cloud production)
+- **Risk Analytics:** riskfolio-lib, quantstats
+- **Containerization:** Docker + Docker Compose
+- **Theme:** Dark royal purple with minimal visual elements
+
+### **Value Proposition**
+- Real-time Options Analytics with coin-based settlement understanding
+- Advanced Volatility Intelligence using crypto sector classification
+- Professional Risk Management with riskfolio-lib integration
+- Rule-based Strategy Suggestions with future AI enhancement
+
+---
+
+## FEATURE ARCHITECTURE MATRIX
+
+### **Feature Categories Overview**
+| Category | Features Count | Priority Level | Development Timeline | Dependencies |
+|----------|---------------|----------------|---------------------|--------------|
+| **Database & Infrastructure** | 10 features | CRITICAL | Week 1-2 | None |
+| **Reflex Dashboard** | 8 features | CRITICAL | Week 2-8 | Database |
+| **Options Analytics (Coin-Based)** | 12 features | HIGH | Week 2-3 | Database, Reflex |
+| **Risk Management (riskfolio-lib)** | 8 features | HIGH | Week 4-5 | Options Analytics |
+| **Volatility Intelligence** | 10 features | HIGH | Week 3-4 | Options Analytics |
+| **Portfolio Management** | 8 features | MEDIUM | Week 5 | Risk Management |
+| **Strategy Engine (Rule-Based)** | 6 features | MEDIUM | Week 5-6 | Portfolio Management |
+| **Deployment & Cloud** | 6 features | LOW | Week 7-8 | All modules |
+
+**Total Features:** 68 features across 8 categories
+
+---
+
+## CRITICAL FEATURES & BOTTLENECKS
+
+### **IMMEDIATE BLOCKERS - Must Fix First**
+
+#### **1. Time-to-Maturity Mathematical Bug**
+**Current State:** Mathematical error in legacy code  
+**Impact:** Affects ALL options pricing, Greeks, and risk calculations  
+**Bottleneck Severity:** CRITICAL - Blocks all subsequent development  
+**Resolution Required:** Week 1, Day 1-2  
+
+**Problem:**
+```python
+# WRONG (legacy implementation):
+time_to_maturity = time_diff.total_seconds() / 31536000 * 365
+# Results in incorrect options prices and Greeks
+```
+
+**Solution:**
+```python
+# CORRECT implementation required:
+def calculate_time_to_maturity(current_time: datetime, expiry_time: datetime) -> float:
+    """
+    Calculate accurate time to maturity in years
+    
+    Mathematical Formula:
+    T = (expiry_time - current_time).total_seconds() / (365.25 * 24 * 3600)
+    
+    Where:
+    - 365.25 accounts for leap years
+    - 24 * 3600 = seconds per day
+    """
+    if expiry_time <= current_time:
+        return 0.0
+    
+    time_diff = expiry_time - current_time
+    return time_diff.total_seconds() / (365.25 * 24 * 3600)
+```
+
+#### **2. Database Architecture Design**
+**Current State:** No database implementation  
+**Impact:** No data persistence, no real-time capabilities  
+**Bottleneck Severity:** CRITICAL - Required for all features  
+**Resolution Required:** Week 1, Day 1-3  
+
+**MongoDB Schema Design:**
+```python
+# collections.py
+collections_schema = {
+    'options_data': {
+        'symbol': str,                    # BTC-29MAR25-50000-C
+        'underlying': str,                # BTC, ETH  
+        'strike': float,                  # Strike price in USD
+        'expiry': datetime,               # Expiration timestamp
+        'option_type': str,               # call, put
+        'premium_crypto': float,          # Premium in base currency (BTC/ETH)
+        'premium_usd': float,             # Premium converted to USD
+        'bid_crypto': float,              # Bid in base currency
+        'ask_crypto': float,              # Ask in base currency
+        'volume': float,                  # 24h volume
+        'open_interest': float,           # Open interest
+        'implied_volatility': float,      # Mark IV
+        'underlying_price': float,        # Spot price at time of quote
+        'greeks': {
+            'delta': float,
+            'gamma': float,
+            'theta': float,
+            'vega': float,
+            'rho': float
+        },
+        'timestamp': datetime,
+        'data_source': str                # 'deribit'
+    },
+    
+    'crypto_prices': {
+        'symbol': str,                    # BTC, ETH, etc.
+        'yfinance_symbol': str,           # BTC-USD, ETH-USD
+        'sector': str,                    # From crypto_sectors.json
+        'price_usd': float,               # Current price
+        'volume_24h': float,              # 24h volume
+        'market_cap': float,              # Market capitalization
+        'price_change_24h': float,        # 24h price change %
+        'timestamp': datetime
+    },
+    
+    'portfolio_data': {
+        'user_id': str,                   # User identifier
+        'portfolio_id': str,              # Portfolio identifier
+        'positions': [                    # Array of positions
+            {
+                'symbol': str,
+                'quantity': float,
+                'entry_price': float,
+                'current_value': float,
+                'position_type': str      # 'crypto', 'option'
+            }
+        ],
+        'sector_allocation': dict,        # Allocation by crypto sector
+        'risk_metrics': {
+            'portfolio_var_95': float,
+            'portfolio_cvar_95': float,
+            'max_drawdown': float,
+            'sharpe_ratio': float,
+            'sortino_ratio': float
+        },
+        'total_value_usd': float,
+        'total_value_crypto': dict,       # Value in each base currency
+        'last_rebalance': datetime,
+        'timestamp': datetime
+    }
+}
+```
+
+#### **3. Reflex Dashboard Foundation**
+**Current State:** No dashboard implementation  
+**Impact:** No user interface for analytics  
+**Bottleneck Severity:** CRITICAL - Primary user interaction  
+**Resolution Required:** Week 2, Day 1-3  
+
+**Reflex App Structure:**
+```python
+# qortfolio.py - Main Reflex app
+import reflex as rx
+
+# Dark royal purple theme configuration
+theme_config = {
+    "primary_color": "#4C1D95",      # Dark purple
+    "secondary_color": "#7C3AED",    # Medium purple  
+    "background_color": "#1F1B24",   # Very dark purple
+    "text_color": "#E5E7EB",         # Light gray
+    "accent_color": "#A855F7",       # Bright purple
+    "card_background": "#2D1B3D",    # Card background
+    "border_color": "#4C1D95"        # Border color
+}
+
+class QortfolioState(rx.State):
+    """Global application state with database integration"""
+    
+    # Database connection
+    db_connected: bool = False
+    
+    # Options data
+    selected_currency: str = "BTC"
+    options_data: list = []
+    volatility_surface_data: dict = {}
+    
+    # Portfolio data
+    portfolio_allocation: dict = {}
+    sector_allocation: dict = {}
+    risk_metrics: dict = {}
+    
+    # Real-time updates
+    last_update: str = ""
+    auto_refresh: bool = True
+```
+
+### **CRYPTO OPTIONS SPECIAL CONSIDERATIONS**
+
+#### **Coin-Based Settlement Complexity**
+**Technical Challenge:** Cryptocurrency options settle in base currency, not USD  
+**Impact:** Affects pricing models, Greeks calculations, and risk metrics  
+**Resolution Strategy:** Specialized pricing engine for crypto options  
+
+**Implementation Requirements:**
+```python
+# Crypto-specific Black-Scholes adjustments
+class CryptoOptionsEngine:
+    def calculate_coin_based_premium(self, 
+                                   usd_premium: float, 
+                                   underlying_price: float) -> float:
+        """
+        Convert USD premium to coin-based premium
+        
+        For BTC options:
+        Premium in BTC = Premium in USD / BTC Price
+        
+        Critical for Deribit integration
+        """
+        return usd_premium / underlying_price
+    
+    def calculate_crypto_greeks(self, S, K, T, r, sigma, option_type):
+        """
+        Adjust Greeks for coin-based settlement
+        
+        Delta (Crypto) = Delta (USD) / S - Premium / S²
+        Gamma (Crypto) = Gamma (USD) / S² - 2 * Premium / S³
+        """
+        # Standard Greeks calculation
+        standard_greeks = self._calculate_standard_greeks(S, K, T, r, sigma, option_type)
+        
+        # Adjust for coin settlement
+        premium_usd = self._calculate_premium_usd(S, K, T, r, sigma, option_type)
+        premium_crypto = premium_usd / S
+        
+        crypto_greeks = {
+            'delta': standard_greeks['delta'] / S - premium_crypto / S,
+            'gamma': standard_greeks['gamma'] / S**2 - 2 * premium_crypto / S**2,
+            'theta': standard_greeks['theta'] / S,
+            'vega': standard_greeks['vega'] / S,
+            'rho': standard_greeks['rho'] / S
+        }
+        
+        return crypto_greeks
+```
+
+---
+
+## COMPLETE FEATURES LIST BY CATEGORY
+
+### **1. DATABASE & INFRASTRUCTURE (10 Features)**
+
+| Feature | Priority | Week | Bottlenecks | Dependencies |
+|---------|----------|------|-------------|--------------|
+| **MongoDB Setup & Docker** | CRITICAL | 1 | Container configuration complexity | None |
+| **Database Schema Design** | CRITICAL | 1 | Schema optimization for real-time queries | MongoDB Setup |
+| **Fixed Time Utilities** | CRITICAL | 1 | Mathematical bug fix validation | None |
+| **Configuration Management** | HIGH | 1 | crypto_sectors.json integration | Database Schema |
+| **Data Collection Pipeline** | HIGH | 1-2 | API rate limits, error handling | Configuration |
+| **Real-time Data Sync** | HIGH | 2 | WebSocket connection stability | Data Pipeline |
+| **Database Indexing** | MEDIUM | 2 | Query optimization complexity | Schema Design |
+| **Backup & Recovery** | MEDIUM | 7 | Data integrity assurance | All Database Features |
+| **Cloud Migration Tools** | MEDIUM | 8 | Local to cloud data transfer | Backup System |
+| **Performance Monitoring** | LOW | 8 | Database performance tracking | Cloud Migration |
+
+#### **Feature 1.1: MongoDB Setup with Docker**
+```yaml
+# docker-compose.yml
+version: '3.8'
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: qortfolio_mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+      MONGO_INITDB_DATABASE: qortfolio
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./scripts/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - qortfolio_network
+
+  qortfolio_app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: qortfolio_app
+    depends_on:
+      - mongodb
+    ports:
+      - "3000:3000"
+    environment:
+      - MONGODB_URL=mongodb://admin:${MONGO_PASSWORD}@mongodb:27017/qortfolio?authSource=admin
+      - ENVIRONMENT=development
+    volumes:
+      - .:/app
+    networks:
+      - qortfolio_network
+
+volumes:
+  mongodb_data:
+
+networks:
+  qortfolio_network:
+    driver: bridge
+```
+
+**Bottlenecks:**
+- **Container Orchestration:** Proper startup order and health checks
+- **Data Persistence:** Volume mounting and data retention
+- **Network Configuration:** Service discovery and communication
+
+#### **Feature 1.2: Crypto Sectors Integration**
+```python
+# src/core/config/crypto_sectors.py
+import json
+from pathlib import Path
+
+class CryptoSectorsConfig:
+    """Integration with existing crypto_sectors.json file"""
+    
+    def __init__(self):
+        self.sectors_file = Path("config/crypto_sectors.json")
+        self.sectors_data = self._load_sectors_data()
+        
+    def _load_sectors_data(self) -> dict:
+        """Load crypto sectors from JSON file"""
+        with open(self.sectors_file, 'r') as f:
+            return json.load(f)
+    
+    def get_sectors_list(self) -> list:
+        """Get all available crypto sectors"""
+        return list(self.sectors_data.keys())
+    
+    def get_sector_assets(self, sector: str) -> dict:
+        """
+        Get assets for specific sector
+        
+        Returns:
+            {
+                'tickers': ['BTC', 'ETH', ...],
+                'yfinance': ['BTC-USD', 'ETH-USD', ...]
+            }
+        """
+        return self.sectors_data.get(sector, {})
+    
+    def get_yfinance_mapping(self) -> dict:
+        """Create complete ticker to yfinance mapping"""
+        mapping = {}
+        for sector_data in self.sectors_data.values():
+            tickers = sector_data.get('tickers', [])
+            yfinance_tickers = sector_data.get('yfinance', [])
+            
+            for ticker, yf_ticker in zip(tickers, yfinance_tickers):
+                mapping[ticker] = yf_ticker
+                
+        return mapping
+
+# Sectors from crypto_sectors.json:
+AVAILABLE_SECTORS = [
+    "DeFi",           # Decentralized Finance protocols
+    "Digital Assets", # Meme coins and digital collectibles  
+    "Infrastructure", # Layer 1 blockchains and infrastructure
+    "DApps",         # Decentralized applications
+    "Privacy",       # Privacy-focused cryptocurrencies
+    "Services",      # Service-oriented blockchain projects
+    "AI"             # Artificial Intelligence crypto projects
+]
+```
+
+---
+
+### **2. REFLEX DASHBOARD (8 Features)**
+
+| Feature | Priority | Week | Bottlenecks | Dependencies |
+|---------|----------|------|-------------|--------------|
+| **Reflex App Foundation** | CRITICAL | 2 | Dark royal purple theme implementation | Database Setup |
+| **State Management** | CRITICAL | 2 | Real-time data binding complexity | App Foundation |
+| **Options Analytics Page** | HIGH | 2-3 | Coin-based data display | State Management |
+| **Volatility Analysis Page** | HIGH | 3 | Interactive chart performance | Options Page |
+| **Portfolio Management Page** | HIGH | 5 | riskfolio-lib integration UI | Volatility Page |
+| **Risk Dashboard** | MEDIUM | 5-6 | Real-time risk monitoring | Portfolio Page |
+| **Strategy Suggestions Page** | MEDIUM | 6 | Rule-based strategy display | Risk Dashboard |
+| **Settings & Configuration** | LOW | 7 | User preference management | All Pages |
+
+#### **Feature 2.1: Reflex App Foundation**
+```python
+# src/qortfolio/qortfolio.py
+import reflex as rx
+from .state import QortfolioState
+from .pages import options_page, volatility_page, portfolio_page, risk_page
+
+# Dark royal purple theme
+def get_theme_config():
+    return {
+        "appearance": "dark",
+        "accent_color": "purple",
+        "gray_color": "slate",
+        "radius": "medium",
+        "scaling": "100%"
+    }
+
+def navigation_bar() -> rx.Component:
+    """Main navigation bar with dark royal purple theme"""
+    return rx.hstack(
+        rx.heading(
+            "Qortfolio V2", 
+            size="6",
+            color="#A855F7"  # Bright purple
+        ),
+        rx.spacer(),
+        rx.hstack(
+            rx.link(
+                "Options",
+                href="/options",
+                color="#E5E7EB",
+                _hover={"color": "#A855F7"}
+            ),
+            rx.link(
+                "Volatility", 
+                href="/volatility",
+                color="#E5E7EB",
+                _hover={"color": "#A855F7"}
+            ),
+            rx.link(
+                "Portfolio",
+                href="/portfolio", 
+                color="#E5E7EB",
+                _hover={"color": "#A855F7"}
+            ),
+            rx.link(
+                "Risk",
+                href="/risk",
+                color="#E5E7EB", 
+                _hover={"color": "#A855F7"}
+            ),
+            spacing="6"
+        ),
+        align="center",
+        width="100%",
+        padding="4",
+        bg="#1F1B24"  # Very dark purple background
+    )
+
+def index() -> rx.Component:
+    """Main dashboard page"""
+    return rx.vstack(
+        navigation_bar(),
+        rx.container(
+            rx.vstack(
+                rx.heading(
+                    "Professional Quantitative Finance Platform",
+                    size="8",
+                    text_align="center",
+                    color="#E5E7EB"
+                ),
+                rx.text(
+                    "Real-time cryptocurrency options analytics with advanced risk management",
+                    size="4",
+                    text_align="center",
+                    color="#9CA3AF"
+                ),
+                rx.grid(
+                    rx.card(
+                        rx.vstack(
+                            rx.heading("Options Analytics", size="4", color="#A855F7"),
+                            rx.text("BTC/ETH options with coin-based settlement"),
+                            rx.button(
+                                "View Options",
+                                on_click=rx.redirect("/options"),
+                                bg="#4C1D95",
+                                color="#E5E7EB"
+                            ),
+                            spacing="3"
+                        ),
+                        bg="#2D1B3D",
+                        border="1px solid #4C1D95"
+                    ),
+                    rx.card(
+                        rx.vstack(
+                            rx.heading("Risk Management", size="4", color="#A855F7"),
+                            rx.text("Advanced risk metrics with riskfolio-lib"),
+                            rx.button(
+                                "View Risk Dashboard",
+                                on_click=rx.redirect("/risk"),
+                                bg="#4C1D95",
+                                color="#E5E7EB"
+                            ),
+                            spacing="3"
+                        ),
+                        bg="#2D1B3D",
+                        border="1px solid #4C1D95"
+                    ),
+                    columns="2",
+                    spacing="4"
+                ),
+                spacing="8",
+                align="center"
+            ),
+            max_width="1200px"
+        ),
+        bg="#1F1B24",
+        min_height="100vh",
+        width="100%"
+    )
+
+# Create the app
+app = rx.App(theme=rx.theme(**get_theme_config()))
+app.add_page(index, route="/")
+app.add_page(options_page, route="/options")
+app.add_page(volatility_page, route="/volatility")
+app.add_page(portfolio_page, route="/portfolio")
+app.add_page(risk_page, route="/risk")
+```
+
+**Theme Specifications:**
+- **Primary Color:** #4C1D95 (Dark purple)
+- **Secondary Color:** #7C3AED (Medium purple)
+- **Background:** #1F1B24 (Very dark purple)
+- **Text Color:** #E5E7EB (Light gray)
+- **Accent Color:** #A855F7 (Bright purple)
+- **Card Background:** #2D1B3D (Card background)
+
+---
+
+### **3. OPTIONS ANALYTICS (COIN-BASED) (12 Features)**
+
+| Feature | Priority | Week | Bottlenecks | Dependencies |
+|---------|----------|------|-------------|--------------|
+| **Deribit Data Collection** | CRITICAL | 1-2 | API rate limits, coin-based parsing | Database Setup |
+| **Coin-Based Black-Scholes** | CRITICAL | 2 | Crypto settlement mathematics | Time Utils, Data Collection |
+| **Crypto Greeks Calculations** | CRITICAL | 2 | Adjusted Greeks for coin settlement | Black-Scholes Engine |
+| **Options Chain Display** | HIGH | 2-3 | Real-time premium updates in crypto | Greeks Calculations |
+| **Implied Volatility Extraction** | HIGH | 2-3 | Newton-Raphson convergence for crypto | Options Chain |
+| **Volatility Surfaces** | HIGH | 3 | 3D surface construction and rendering | IV Extraction |
+| **Gamma Exposure (Crypto)** | HIGH | 3 | Portfolio-level gamma in crypto terms | Volatility Surfaces |
+| **IV vs RV Analysis** | HIGH | 3 | Real-time volatility comparison | Gamma Exposure |
+| **Options Flow Analysis** | MEDIUM | 4 | Volume and open interest patterns | IV vs RV |
+| **Put/Call Ratio Analytics** | MEDIUM | 4 | Market sentiment indicators | Options Flow |
+| **Strategy Payoff Diagrams** | MEDIUM | 5 | Interactive P&L visualization | Put/Call Ratios |
+| **Historical Options Data** | LOW | 6 | Long-term analytics and backtesting | All Options Features |
+
+#### **Feature 3.1: Coin-Based Black-Scholes Engine**
+```python
+# src/models/options/crypto_black_scholes.py
+import numpy as np
+from scipy.stats import norm
+from scipy.optimize import brentq
+import math
+
+class CryptoBlackScholesEngine:
+    """
+    Black-Scholes engine specifically designed for cryptocurrency options
+    
+    Key Differences from Traditional Options:
+    1. Premium quoted and settled in base currency (BTC/ETH)
+    2. Greeks adjusted for coin-based settlement
+    3. Special handling for extreme volatility scenarios
+    """
+    
+    def __init__(self, db_connection):
+        self.db = db_connection
+        
+    def calculate_crypto_option_price(self,
+                                    S: float,      # Underlying price (USD)
+                                    K: float,      # Strike price (USD) 
+                                    T: float,      # Time to maturity (years)
+                                    r: float,      # Risk-free rate
+                                    sigma: float,  # Implied volatility
+                                    option_type: str = "call") -> dict:
+        """
+        Calculate cryptocurrency option price with coin-based settlement
+        
+        Returns both USD and crypto-denominated values
+        """
+        
+        # Handle edge cases
+        if T <= 0:
+            return self._calculate_intrinsic_value(S, K, option_type)
+        
+        if sigma <= 0:
+            sigma = 0.01  # Minimum volatility
+            
+        # Standard Black-Scholes calculation (USD terms)
+        d1 = (math.log(S / K) + (r + 0.5 * sigma**2) * T) / (sigma * math.sqrt(T))
+        d2 = d1 - sigma * math.sqrt(T)
+        
+        if option_type.lower() == "call":
+            price_usd = S * norm.cdf(d1) - K * math.exp(-r * T) * norm.cdf(d2)
+        else:  # put
+            price_usd = K * math.exp(-r * T) * norm.cdf(-d2) - S * norm.cdf(-d1)
+            
+        # Convert to coin-based premium (CRITICAL for crypto options)
+        premium_crypto = price_usd / S
+        
+        # Calculate adjusted Greeks for coin settlement
+        greeks = self._calculate_crypto_greeks(S, K, T, r, sigma, option_type, price_usd)
+        
+        return {
+            'premium_usd': max(0, price_usd),
+            'premium_crypto': max(0, premium_crypto),
+            'underlying_price': S,
+            'strike': K,
+            'time_to_maturity': T,
+            'implied_volatility': sigma,
+            'option_type': option_type,
+            'greeks': greeks,
+            'moneyness': S / K
+        }
+    
+    def _calculate_crypto_greeks(self, S, K, T, r, sigma, option_type, price_usd):
+        """
+        Calculate Greeks adjusted for cryptocurrency settlement
+        
+        Key Adjustments:
+        - Delta: Accounts for coin-based premium changes
+        - Gamma: Adjusted for S² term in denominator
+        - Theta: Time decay in crypto terms
+        - Vega: Volatility sensitivity in crypto terms
+        """
+        
+        d1 = (math.log(S / K) + (r + 0.5 * sigma**2) * T) / (sigma * math.sqrt(T))
+        d2 = d1 - sigma * math.sqrt(T)
+        
+        # Standard Greeks (USD terms)
+        if option_type.lower() == "call":
+            delta_usd = norm.cdf(d1)
+            theta_usd = (-S * norm.pdf(d1) * sigma / (2 * math.sqrt(T)) - 
+                        r * K * math.exp(-r * T) * norm.cdf(d2))
+        else:  # put
+            delta_usd = norm.cdf(d1) - 1
+            theta_usd = (-S * norm.pdf(d1) * sigma / (2 * math.sqrt(T)) + 
+                        r * K * math.exp(-r * T) * norm.cdf(-d2))
+        
+        gamma_usd = norm.pdf(d1) / (S * sigma * math.sqrt(T))
+        vega_usd = S * norm.pdf(d1) * math.sqrt(T)
+        rho_usd = K * T * math.exp(-r * T) * (norm.cdf(d2) if option_type.lower() == "call" else norm.cdf(-d2))
+        
+        # Convert to crypto-adjusted Greeks
+        premium_crypto = price_usd / S
+        
+        greeks = {
+            'delta': delta_usd / S - premium_crypto / S,           # Adjusted for coin settlement
+            'gamma': gamma_usd / S**2 - 2 * premium_crypto / S**2, # Second-order adjustment
+            'theta': theta_usd / S,                                # Time decay in crypto
+            'vega': vega_usd / S,                                  # Vol sensitivity in crypto
+            'rho': rho_usd / S,                                    # Rate sensitivity in crypto
+            'delta_usd': delta_usd,                                # Keep USD Greeks for reference
+            'gamma_usd': gamma_usd,
+            'theta_usd': theta_usd,
+            'vega_usd': vega_usd,
+            'rho_usd': rho_usd
+        }
+        
+        return greeks
+    
+    def calculate_implied_volatility(self, 
+                                   market_price_crypto: float,
+                                   S: float, K: float, T: float, r: float,
+                                   option_type: str) -> float:
+        """
+        Calculate implied volatility from market price (crypto-denominated)
+        
+        Uses Brent's method for root finding
+        """
+        
+        # Convert crypto premium to USD for calculation
+        market_price_usd = market_price_crypto * S
+        
+        def objective_function(sigma):
+            theoretical_price = self.calculate_crypto_option_price(
+                S, K, T, r, sigma, option_type
+            )['premium_usd']
+            return theoretical_price - market_price_usd
+        
+        try:
+            # Search for IV between 1% and 500% (crypto can be very volatile)
+            iv = brentq(objective_function, 0.01, 5.0, xtol=1e-6, maxiter=100)
+            return iv
+        except ValueError:
+            # If no solution found, return a reasonable estimate
+            return 1.0  # 100% annual volatility as fallback
+    
+    async def store_option_data(self, option_data: dict):
+        """Store calculated option data in MongoDB"""
+        
+        document = {
+            'symbol': f"{option_data['underlying']}-{option_data['expiry']}-{option_data['strike']}-{option_data['option_type'][0].upper()}",
+            'underlying': option_data['underlying'],
+            'strike': option_data['strike'],
+            'expiry': option_data['expiry'],
+            'option_type': option_data['option_type'],
+            'premium_crypto': option_data['premium_crypto'],
+            'premium_usd': option_data['premium_usd'],
+            'implied_volatility': option_data['implied_volatility'],
+            'greeks': option_data['greeks'],
+            'underlying_price': option_data['underlying_price'],
+            'timestamp': datetime.utcnow(),
+            'data_source': 'calculated'
+        }
+        
+        await self.db.options_data.insert_one(document)
+```
+
+**Critical Mathematical Considerations:**
+```
+Traditional Option Premium: P_usd = f(S, K, T, r, σ)
+Crypto Option Premium: P_crypto = P_usd / S
+
+Greeks Adjustments:
+Δ_crypto = Δ_usd / S - P_crypto / S
+Γ_crypto = Γ_usd / S² - 2 * P_crypto / S²
+Θ_crypto = Θ_usd / S
+ν_crypto = ν_usd / S
+ρ_crypto = ρ_usd / S
+```
+
+---
+
+### **4. RISK MANAGEMENT (RISKFOLIO-LIB) (8 Features)**
+
+| Feature | Priority | Week | Bottlenecks | Dependencies |
+|---------|----------|------|-------------|--------------|
+| **riskfolio-lib Integration** | CRITICAL | 4 | Library configuration and data formatting | Options Analytics |
+| **Portfolio VaR/CVaR Calculation** | HIGH | 4 | Risk model validation | riskfolio Integration |
+| **quantstats Performance Metrics** | HIGH | 4 | Statistical accuracy | VaR/CVaR Calculation |
+| **Risk Attribution Analysis** | HIGH | 5 | Component risk breakdown | Performance Metrics |
+| **Stress Testing Framework** | MEDIUM | 5 | Scenario generation complexity | Risk Attribution |
+| **Real-time Risk Monitoring** | MEDIUM | 5-6 | Continuous calculation performance | Stress Testing |
+| **Risk Reporting Dashboard** | MEDIUM | 6 | Interactive risk visualizations | Risk Monitoring |
+| **Risk Limit Management** | LOW | 6 | Automated alert system | Risk Reporting |
+
+#### **Feature 4.1: riskfolio-lib Integration**
+```python
+# src/analytics/risk/riskfolio_integration.py
+import riskfolio as rp
+import quantstats as qs
+import pandas as pd
+import numpy as np
+from datetime import datetime, timedelta
+
+class RiskfolioAnalyzer:
+    """
+    Advanced risk analytics using riskfolio-lib and quantstats
+    
+    Provides:
+    - Portfolio optimization algorithms
+    - Risk metrics calculation
+    - Performance attribution
+    - Stress testing
+    """
+    
+    def __init__(self, db_connection):
+        self.db = db_connection
+        
+    async def create_portfolio_from_db(self, portfolio_id: str) -> rp.Portfolio:
+        """
+        Create riskfolio Portfolio object from database data
+        """
+        
+        # Fetch portfolio positions from database
+        portfolio_data = await self.db.get_portfolio_data(portfolio_id)
+        
+        # Fetch historical returns for portfolio assets
+        returns_data = await self._get_returns_data(portfolio_data['positions'])
+        
+        # Create riskfolio Portfolio
+        port = rp.Portfolio(returns=returns_data)
+        
+        # Estimate statistical parameters
+        port.assets_stats(
+            method_mu='hist',    # Historical mean
+            method_cov='hist',   # Historical covariance
+            d=0.94              # Exponential decay factor
+        )
+        
+        return port
+    
+    async def calculate_comprehensive_risk_metrics(self, portfolio_id: str) -> dict:
+        """
+        Calculate comprehensive risk metrics using riskfolio-lib
+        """
+        
+        port = await self.create_portfolio_from_db(portfolio_id)
+        portfolio_data = await self.db.get_portfolio_data(portfolio_id)
+        
+        # Get portfolio weights
+        weights = self._extract_weights_from_positions(portfolio_data['positions'])
+        
+        # Calculate returns
+        returns = port.returns @ weights
+        
+        # riskfolio-lib risk metrics
+        risk_metrics = {
+            # Value at Risk and Conditional VaR
+            'var_95_hist': port.var_hist(alpha=0.05).iloc[0],
+            'cvar_95_hist': port.cvar_hist(alpha=0.05).iloc[0],
+            'var_99_hist': port.var_hist(alpha=0.01).iloc[0],
+            'cvar_99_hist': port.cvar_hist(alpha=0.01).iloc[0],
+            
+            # Portfolio risk measures
+            'portfolio_volatility': np.sqrt(weights.T @ port.cov @ weights) * np.sqrt(252),
+            'portfolio_returns': port.mu @ weights * 252,
+            
+            # Drawdown measures
+            'max_drawdown': port.max_drawdown(returns).iloc[0],
+            'average_drawdown': port.average_drawdown(returns).iloc[0],
+            'drawdown_duration': port.drawdown_duration(returns).iloc[0],
+            
+            # Risk-adjusted returns
+            'sharpe_ratio': (port.mu @ weights * 252) / (np.sqrt(weights.T @ port.cov @ weights) * np.sqrt(252)),
+            'sortino_ratio': port.sortino_ratio(returns).iloc[0],
+            'calmar_ratio': port.calmar_ratio(returns).iloc[0],
+            
+            # Diversification measures
+            'effective_number_assets': 1 / (weights**2).sum(),
+            'concentration_ratio': (weights**2).sum(),
+            
+            # Tail risk measures
+            'skewness': returns.skew(),
+            'kurtosis': returns.kurtosis(),
+            'jarque_bera_pvalue': port.jarque_bera(returns)[1]
+        }
+        
+        # Add quantstats metrics
+        qs_metrics = self._calculate_quantstats_metrics(returns)
+        risk_metrics.update(qs_metrics)
+        
+        # Store metrics in database
+        await self._store_risk_metrics(portfolio_id, risk_metrics)
+        
+        return risk_metrics
+    
+    def _calculate_quantstats_metrics(self, returns: pd.Series) -> dict:
+        """Calculate additional metrics using quantstats"""
+        
+        return {
+            # Performance metrics
+            'total_return': qs.stats.comp(returns),
+            'annual_return': qs.stats.cagr(returns),
+            'best_month': qs.stats.best(returns),
+            'worst_month': qs.stats.worst(returns),
+            
+            # Risk metrics
+            'volatility': qs.stats.volatility(returns, annualize=True),
+            'var_95_qs': qs.stats.var(returns, confidence=0.95),
+            'cvar_95_qs': qs.stats.cvar(returns, confidence=0.95),
+            
+            # Risk-adjusted metrics
+            'sharpe_qs': qs.stats.sharpe(returns, rf=0.02),
+            'sortino_qs': qs.stats.sortino(returns, rf=0.02),
+            'omega_ratio': qs.stats.omega(returns, rf=0.02),
+            'information_ratio': qs.stats.information_ratio(returns),
+            
+            # Tail risk
+            'tail_ratio': qs.stats.tail_ratio(returns),
+            'common_sense_ratio': qs.stats.common_sense_ratio(returns),
+            'outlier_win_ratio': qs.stats.outlier_win_ratio(returns),
+            'outlier_loss_ratio': qs.stats.outlier_loss_ratio(returns),
+            
+            # Consistency metrics
+            'win_rate': qs.stats.win_rate(returns),
+            'avg_win': qs.stats.avg_win(returns),
+            'avg_loss': qs.stats.avg_loss(returns),
+            'payoff_ratio': qs.stats.payoff_ratio(returns),
+            'profit_factor': qs.stats.profit_factor(returns)
+        }
+    
+    async def optimize_portfolio_hrp(self, asset_list: list) -> dict:
+        """
+        Optimize portfolio using Hierarchical Risk Parity (HRP)
+        """
+        
+        # Fetch returns data for assets
+        returns_data = await self._get_returns_data_by_symbols(asset_list)
+        
+        # Create portfolio
+        port = rp.Portfolio(returns=returns_data)
+        port.assets_stats(method_mu='hist', method_cov='hist')
+        
+        # HRP optimization
+        w_hrp = port.optimization(
+            model='HRP',      # Hierarchical Risk Parity
+            rm='MV',          # Mean-Variance
+            obj='Sharpe',     # Maximize Sharpe ratio
+            rf=0.02,          # Risk-free rate
+            l=0,              # Risk aversion factor
+            hist=True         # Use historical scenarios
+        )
+        
+        # Calculate HRP performance metrics
+        hrp_returns = returns_data @ w_hrp
+        hrp_metrics = {
+            'weights': w_hrp.to_dict(),
+            'expected_return': (returns_data.mean() @ w_hrp) * 252,
+            'volatility': np.sqrt(w_hrp.T @ port.cov @ w_hrp) * np.sqrt(252),
+            'sharpe_ratio': ((returns_data.mean() @ w_hrp) * 252) / (np.sqrt(w_hrp.T @ port.cov @ w_hrp) * np.sqrt(252)),
+            'max_drawdown': qs.stats.max_drawdown(hrp_returns),
+            'var_95': np.percentile(hrp_returns, 5),
+            'cvar_95': hrp_returns[hrp_returns <= np.percentile(hrp_returns, 5)].mean()
+        }
+        
+        return hrp_metrics
+    
+    async def stress_test_portfolio(self, portfolio_id: str, scenarios: dict) -> dict:
+        """
+        Perform stress testing on portfolio
+        
+        scenarios: {
+            'market_crash': {'BTC': -0.30, 'ETH': -0.40},
+            'volatility_spike': {'vol_multiplier': 2.0},
+            'correlation_breakdown': {'correlation_factor': 0.1}
+        }
+        """
+        
+        portfolio_data = await self.db.get_portfolio_data(portfolio_id)
+        stress_results = {}
+        
+        for scenario_name, scenario_params in scenarios.items():
+            scenario_result = await self._run_stress_scenario(
+                portfolio_data, scenario_params
+            )
+            stress_results[scenario_name] = scenario_result
+            
+        return stress_results
+    
+    async def _store_risk_metrics(self, portfolio_id: str, metrics: dict):
+        """Store calculated risk metrics in database"""
+        
+        document = {
+            'portfolio_id': portfolio_id,
+            'risk_metrics': metrics,
+            'calculation_timestamp': datetime.utcnow(),
+            'metrics_version': '1.0'
+        }
+        
+        await self.db.risk_metrics.insert_one(document)
+```
+
+---
+
+### **5. STRATEGY ENGINE (RULE-BASED) (6 Features)**
+
+| Feature | Priority | Week | Bottlenecks | Dependencies |
+|---------|----------|------|-------------|--------------|
+| **Rule-Based Strategy Framework** | HIGH | 5 | Strategy logic complexity | Risk Management |
+| **Options Strategy Suggestions** | HIGH | 5-6 | Market condition recognition | Strategy Framework |
+| **Volatility-Based Strategies** | MEDIUM | 6 | IV/RV analysis integration | Options Strategies |
+| **Portfolio Strategy Integration** | MEDIUM | 6 | Multi-asset strategy coordination | Volatility Strategies |
+| **Strategy Backtesting** | LOW | 6 | Historical simulation accuracy | Portfolio Integration |
+| **AI Enhancement Foundation** | LOW | 8 | ML model preparation for Phase 2 | All Strategy Features |
+
+#### **Feature 5.1: Rule-Based Strategy Engine**
+```python
+# src/analytics/strategies/rule_based_engine.py
+from dataclasses import dataclass
+from typing import List, Dict, Optional
+from enum import Enum
+
+class MarketRegime(Enum):
+    HIGH_VOLATILITY = "high_vol"
+    LOW_VOLATILITY = "low_vol"
+    TRENDING_UP = "trending_up"
+    TRENDING_DOWN = "trending_down"
+    SIDEWAYS = "sideways"
+    HIGH_SKEW = "high_skew"
+    LOW_SKEW = "low_skew"
+
+@dataclass
+class StrategyRecommendation:
+    strategy_name: str
+    strategy_type: str  # 'options', 'spot', 'portfolio'
+    confidence: float   # 0.0 to 1.0
+    reasoning: str
+    implementation: Dict
+    risk_assessment: Dict
+    expected_pnl: Dict
+    max_loss: float
+    probability_of_profit: float
+
+class RuleBasedStrategyEngine:
+    """
+    Rule-based strategy suggestion engine
+    
+    Phase 1: Rules-based logic using market indicators
+    Future Phase: AI/ML enhancement for pattern recognition
+    """
+    
+    def __init__(self, db_connection):
+        self.db = db_connection
+        self.min_confidence_threshold = 0.6
+        
+    async def suggest_strategies(self, 
+                               currency: str = "BTC",
+                               portfolio_id: Optional[str] = None) -> List[StrategyRecommendation]:
+        """
+        Generate strategy suggestions based on current market conditions
+        """
+        
+        # Analyze current market conditions
+        market_analysis = await self._analyze_market_conditions(currency)
+        
+        # Get portfolio context if provided
+        portfolio_context = None
+        if portfolio_id:
+            portfolio_context = await self._analyze_portfolio_context(portfolio_id)
+        
+        # Generate strategy suggestions
+        strategies = []
+        
+        # Options strategies based on volatility
+        options_strategies = await self._suggest_options_strategies(market_analysis)
+        strategies.extend(options_strategies)
+        
+        # Portfolio rebalancing strategies
+        if portfolio_context:
+            portfolio_strategies = await self._suggest_portfolio_strategies(
+                market_analysis, portfolio_context
+            )
+            strategies.extend(portfolio_strategies)
+        
+        # Filter by confidence threshold
+        high_confidence_strategies = [
+            s for s in strategies if s.confidence >= self.min_confidence_threshold
+        ]
+        
+        # Sort by confidence
+        high_confidence_strategies.sort(key=lambda x: x.confidence, reverse=True)
+        
+        return high_confidence_strategies[:5]  # Return top 5 strategies
+    
+    async def _analyze_market_conditions(self, currency: str) -> Dict:
+        """
+        Analyze current market conditions for strategy suggestions
+        """
+        
+        # Fetch recent options data
+        options_data = await self.db.get_recent_options_data(currency, hours=24)
+        
+        # Fetch recent price data
+        price_data = await self.db.get_recent_price_data(currency, days=30)
+        
+        # Calculate market indicators
+        current_price = price_data.iloc[-1]['price_usd']
+        price_change_24h = (current_price / price_data.iloc[-2]['price_usd']) - 1
+        
+        # Volatility analysis
+        returns = price_data['price_usd'].pct_change().dropna()
+        realized_vol = returns.std() * np.sqrt(365)  # Annualized
+        
+        # Implied volatility analysis
+        iv_data = [opt['implied_volatility'] for opt in options_data if opt['implied_volatility']]
+        avg_iv = np.mean(iv_data) if iv_data else None
+        
+        # Volatility regime
+        vol_regime = self._classify_volatility_regime(realized_vol, avg_iv)
+        
+        # Trend analysis
+        sma_20 = price_data['price_usd'].rolling(20).mean().iloc[-1]
+        sma_50 = price_data['price_usd'].rolling(50).mean().iloc[-1] if len(price_data) >= 50 else sma_20
+        
+        trend_regime = self._classify_trend_regime(current_price, sma_20, sma_50)
+        
+        # Options skew analysis
+        skew_analysis = self._analyze_options_skew(options_data)
+        
+        return {
+            'currency': currency,
+            'current_price': current_price,
+            'price_change_24h': price_change_24h,
+            'realized_volatility': realized_vol,
+            'implied_volatility': avg_iv,
+            'vol_regime': vol_regime,
+            'trend_regime': trend_regime,
+            'skew_analysis': skew_analysis,
+            'timestamp': datetime.utcnow()
+        }
+    
+    async def _suggest_options_strategies(self, market_analysis: Dict) -> List[StrategyRecommendation]:
+        """
+        Suggest options strategies based on market analysis
+        """
+        
+        strategies = []
+        currency = market_analysis['currency']
+        current_price = market_analysis['current_price']
+        vol_regime = market_analysis['vol_regime']
+        trend_regime = market_analysis['trend_regime']
+        iv = market_analysis['implied_volatility']
+        rv = market_analysis['realized_volatility']
+        
+        # High IV strategies (sell premium)
+        if vol_regime == MarketRegime.HIGH_VOLATILITY and iv and iv > rv * 1.2:
+            
+            # Short strangle
+            strategies.append(StrategyRecommendation(
+                strategy_name="Short Strangle",
+                strategy_type="options",
+                confidence=0.8,
+                reasoning=f"High IV ({iv:.1%}) vs RV ({rv:.1%}). Premium selling opportunity.",
+                implementation={
+                    'action': 'sell',
+                    'call_strike': current_price * 1.15,  # 15% OTM call
+                    'put_strike': current_price * 0.85,   # 15% OTM put
+                    'expiry_days': 30,
+                    'position_size': 0.1  # 10% of portfolio
+                },
+                risk_assessment={
+                    'max_profit': iv * current_price * 0.1,  # Approx premium collected
+                    'breakeven_upper': current_price * 1.15 + (iv * current_price * 0.05),
+                    'breakeven_lower': current_price * 0.85 - (iv * current_price * 0.05),
+                    'max_loss': float('inf'),  # Theoretically unlimited
+                    'assignment_risk': 'medium'
+                },
+                expected_pnl={'expected_return': 0.15, 'time_horizon_days': 30},
+                max_loss=current_price * 0.2,  # Stop loss at 20%
+                probability_of_profit=0.65
+            ))
+            
+            # Iron condor
+            strategies.append(StrategyRecommendation(
+                strategy_name="Iron Condor",
+                strategy_type="options",
+                confidence=0.75,
+                reasoning=f"High IV environment. Defined risk premium selling.",
+                implementation={
+                    'action': 'sell_spread',
+                    'call_spread': {'sell': current_price * 1.10, 'buy': current_price * 1.20},
+                    'put_spread': {'sell': current_price * 0.90, 'buy': current_price * 0.80},
+                    'expiry_days': 45,
+                    'position_size': 0.15
+                },
+                risk_assessment={
+                    'max_profit': current_price * 0.02,  # Width - premium
+                    'max_loss': current_price * 0.08,    # Spread width - premium
+                    'profit_range': (current_price * 0.90, current_price * 1.10)
+                },
+                expected_pnl={'expected_return': 0.12, 'time_horizon_days': 45},
+                max_loss=current_price * 0.08,
+                probability_of_profit=0.60
+            ))
+        
+        # Low IV strategies (buy premium)
+        elif vol_regime == MarketRegime.LOW_VOLATILITY and iv and iv < rv * 0.8:
+            
+            # Long straddle
+            strategies.append(StrategyRecommendation(
+                strategy_name="Long Straddle",
+                strategy_type="options",
+                confidence=0.7,
+                reasoning=f"Low IV ({iv:.1%}) vs RV ({rv:.1%}). Expecting volatility expansion.",
+                implementation={
+                    'action': 'buy',
+                    'call_strike': current_price,
+                    'put_strike': current_price,
+                    'expiry_days': 60,
+                    'position_size': 0.05
+                },
+                risk_assessment={
+                    'max_loss': iv * current_price * 0.1,  # Premium paid
+                    'breakeven_upper': current_price * (1 + iv * 0.1),
+                    'breakeven_lower': current_price * (1 - iv * 0.1),
+                    'max_profit': float('inf')
+                },
+                expected_pnl={'expected_return': 0.25, 'time_horizon_days': 60},
+                max_loss=iv * current_price * 0.1,
+                probability_of_profit=0.45
+            ))
+        
+        # Directional strategies based on trend
+        if trend_regime == MarketRegime.TRENDING_UP:
+            strategies.append(StrategyRecommendation(
+                strategy_name="Bull Call Spread",
+                strategy_type="options", 
+                confidence=0.65,
+                reasoning="Upward trend detected. Limited risk bullish strategy.",
+                implementation={
+                    'action': 'buy_spread',
+                    'long_strike': current_price * 1.05,
+                    'short_strike': current_price * 1.15,
+                    'expiry_days': 30,
+                    'position_size': 0.08
+                },
+                risk_assessment={
+                    'max_profit': current_price * 0.10,
+                    'max_loss': current_price * 0.03,
+                    'breakeven': current_price * 1.08
+                },
+                expected_pnl={'expected_return': 0.20, 'time_horizon_days': 30},
+                max_loss=current_price * 0.03,
+                probability_of_profit=0.55
+            ))
+        
+        return strategies
+    
+    def _classify_volatility_regime(self, realized_vol: float, implied_vol: Optional[float]) -> MarketRegime:
+        """Classify current volatility regime"""
+        
+        if implied_vol is None:
+            # Use only realized volatility
+            return MarketRegime.HIGH_VOLATILITY if realized_vol > 0.6 else MarketRegime.LOW_VOLATILITY
+        
+        # Compare IV vs RV
+        if implied_vol > 0.8:  # 80% annual volatility
+            return MarketRegime.HIGH_VOLATILITY
+        elif implied_vol < 0.3:  # 30% annual volatility
+            return MarketRegime.LOW_VOLATILITY
+        else:
+            return MarketRegime.SIDEWAYS
+    
+    def _classify_trend_regime(self, current_price: float, sma_20: float, sma_50: float) -> MarketRegime:
+        """Classify current trend regime"""
+        
+        if current_price > sma_20 > sma_50:
+            return MarketRegime.TRENDING_UP
+        elif current_price < sma_20 < sma_50:
+            return MarketRegime.TRENDING_DOWN
+        else:
+            return MarketRegime.SIDEWAYS
+    
+    async def backtest_strategy(self, strategy: StrategyRecommendation, days_back: int = 30) -> Dict:
+        """
+        Backtest a strategy recommendation using historical data
+        """
+        
+        # Fetch historical data
+        end_date = datetime.utcnow()
+        start_date = end_date - timedelta(days=days_back)
+        
+        historical_options = await self.db.get_historical_options_data(
+            strategy.implementation.get('currency', 'BTC'),
+            start_date,
+            end_date
+        )
+        
+        # Simulate strategy performance
+        # This is a simplified backtest - production would be more sophisticated
+        
+        pnl_series = []
+        for i in range(len(historical_options) - 1):
+            daily_pnl = self._calculate_daily_strategy_pnl(
+                strategy, historical_options[i], historical_options[i+1]
+            )
+            pnl_series.append(daily_pnl)
+        
+        # Calculate backtest metrics
+        total_return = sum(pnl_series)
+        win_rate = len([p for p in pnl_series if p > 0]) / len(pnl_series)
+        max_drawdown = self._calculate_max_drawdown(pnl_series)
+        
+        return {
+            'total_return': total_return,
+            'win_rate': win_rate,
+            'max_drawdown': max_drawdown,
+            'number_of_trades': len(pnl_series),
+            'avg_trade': np.mean(pnl_series),
+            'sharpe_ratio': np.mean(pnl_series) / np.std(pnl_series) if np.std(pnl_series) > 0 else 0
+        }
+```
+
+**Strategy Logic Framework:**
+1. **Market Regime Detection** - Volatility, trend, and skew analysis
+2. **Strategy Mapping** - Rules-based mapping from market conditions to strategies
+3. **Risk Assessment** - Quantified risk metrics for each suggestion
+4. **Backtesting** - Historical performance validation
+5. **Confidence Scoring** - Probability-based ranking system
+
+---
+
+## BOTTLENECK ANALYSIS & MITIGATION
+
+### **Critical Path Dependencies**
+
+#### **1. Database → Everything**
+**Impact:** All features depend on MongoDB functionality  
+**Mitigation:** 
+- Prioritize database setup in Week 1, Day 1
+- Implement comprehensive error handling
+- Create database connection pooling
+- Design schema for optimal query performance
+
+#### **2. Time Calculation Bug → Options Pricing**
+**Impact:** Affects all financial calculations  
+**Mitigation:**
+- Fix immediately on Day 1
+- Extensive testing with benchmark values
+- Validate against external sources (Deribit prices)
+
+#### **3. Reflex Learning Curve → UI Development**
+**Impact:** Dashboard development may be slower than expected  
+**Mitigation:**
+- Start with simple components, build complexity gradually
+- Focus on functionality over aesthetics initially
+- Use Reflex documentation extensively
+- Consider parallel development of backend while learning frontend
+
+### **Technical Complexity Bottlenecks**
+
+#### **Coin-Based Options Mathematics**
+**Complexity Level:** HIGH  
+**Risk Factors:**
+- Non-standard settlement mechanics
+- Greeks calculations require adjustment
+- Market data interpretation differences
+
+**Mitigation Strategy:**
+- Implement both USD and crypto versions of calculations
+- Extensive testing against Deribit market data
+- Create validation framework for mathematical accuracy
+
+#### **Real-time Data Pipeline Performance**
+**Complexity Level:** MEDIUM  
+**Risk Factors:**
+- WebSocket connection stability
+- Database write performance under load
+- Memory usage with continuous data streams
+
+**Mitigation Strategy:**
+- Implement connection retry logic
+- Use database connection pooling
+- Implement data buffering and batch writes
+- Monitor memory usage and implement cleanup
+
+### **Integration Bottlenecks**
+
+#### **riskfolio-lib + quantstats Integration**
+**Risk Factors:**
+- Data format compatibility between libraries
+- Performance with large datasets
+- Statistical accuracy validation
+
+**Mitigation Strategy:**
+- Create standardized data transformation pipeline
+- Implement caching for expensive calculations
+- Cross-validate results between libraries
+- Use subset of data for initial testing
+
+---
+
+## PACKAGE MANAGEMENT SUPPORT
+
+### **pip Requirements (requirements.txt)**
+```txt
+# Core framework
+reflex>=0.3.0
+pymongo>=4.6.0
+motor>=3.3.0
+
+# Financial libraries
+riskfolio-lib>=6.0.0
+quantstats>=0.0.62
+yfinance>=0.2.18
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Mathematical libraries
+scipy>=1.11.0
+scikit-learn>=1.3.0
+
+# Data processing
+aiohttp>=3.9.0
+websockets>=12.0
+
+# Development
+pytest>=7.4.0
+black>=23.0.0
+mypy>=1.8.0
+
+# Deployment
+docker>=6.1.0
+gunicorn>=21.2.0
+```
+
+### **conda Environment (environment.yml)**
+```yaml
+name: qortfolio-v2
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python>=3.11
+  - pandas>=2.0.0
+  - numpy>=1.24.0
+  - scipy>=1.11.0
+  - scikit-learn>=1.3.0
+  - pymongo>=4.6.0
+  - pip
+  - pip:
+    - reflex>=0.3.0
+    - motor>=3.3.0
+    - riskfolio-lib>=6.0.0
+    - quantstats>=0.0.62
+    - yfinance>=0.2.18
+    - aiohttp>=3.9.0
+    - websockets>=12.0
+    - pytest>=7.4.0
+    - black>=23.0.0
+    - mypy>=1.8.0
+```
+
+---
+
+**This comprehensive features analysis with DATABASE and REFLEX as core priorities, coin-based options mathematics, and riskfolio-lib integration ensures systematic development and successful delivery of a professional quantitative finance platform.**

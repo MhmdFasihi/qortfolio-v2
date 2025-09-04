@@ -1,0 +1,1368 @@
+# Copyright (c) 2025 Seyed Mohammad Hossein Fasihi (Mhmd Fasihi)
+# This file is part of a project licensed under AGPLv3 or a commercial license.
+# AGPLv3: https://www.gnu.org/licenses/agpl-3.0.html
+# Contact for commercial licensing: mhmd.fasihi@gmail.com
+
+# Qortfolio V2 - Complete Project Files & Directory Structure
+
+## PROJECT DIRECTORY OVERVIEW
+
+**Project Root:** `qortfolio-v2/`  
+**Architecture:** Modular Python package with Reflex frontend and MongoDB backend  
+**Standards:** PEP 8 compliance, type hints, comprehensive documentation  
+**Testing:** >90% coverage with pytest framework  
+**Database:** MongoDB with Docker containerization  
+**Frontend:** Reflex.dev with dark royal purple theme  
+**Package Management:** Both pip and conda support
+
+---
+
+## COMPLETE DIRECTORY STRUCTURE
+
+```
+qortfolio-v2/
+├── 📄 README.md                           # Project overview and quick start
+├── 📄 LICENSE                             # AGPLv3 license file
+├── 📄 .gitignore                          # Git ignore patterns
+├── 📄 .env.example                        # Environment variables template
+├── 📄 requirements.txt                    # pip dependencies
+├── 📄 environment.yml                     # conda dependencies
+├── 📄 pyproject.toml                      # Modern Python packaging
+├── 📄 Dockerfile                          # Docker container definition
+├── 📄 docker-compose.yml                  # Docker services orchestration
+├── 📄 docker-compose.prod.yml             # Production Docker configuration
+│
+├── 📂 src/                                # Main source code
+│   ├── 📄 __init__.py                     # Package initialization
+│   │
+│   ├── 📂 qortfolio/                      # Main Reflex application
+│   │   ├── 📄 __init__.py                 # Reflex app initialization
+│   │   ├── 📄 qortfolio.py                # Main Reflex app file
+│   │   ├── 📄 rxconfig.py                 # Reflex configuration
+│   │   ├── 📂 pages/                      # Reflex pages
+│   │   │   ├── 📄 __init__.py             # Pages module initialization
+│   │   │   ├── 📄 index.py                # Homepage
+│   │   │   ├── 📄 options_analytics.py    # Options analytics page
+│   │   │   ├── 📄 volatility_analysis.py  # Volatility analysis page
+│   │   │   ├── 📄 portfolio_management.py # Portfolio management page
+│   │   │   ├── 📄 risk_dashboard.py       # Risk monitoring page
+│   │   │   ├── 📄 strategy_suggestions.py # Strategy recommendations page
+│   │   │   └── 📄 settings.py             # Settings and configuration page
+│   │   ├── 📂 components/                 # Reusable Reflex components
+│   │   │   ├── 📄 __init__.py             # Components module initialization
+│   │   │   ├── 📄 navbar.py               # Navigation bar component
+│   │   │   ├── 📄 charts.py               # Chart components (Plotly integration)
+│   │   │   ├── 📄 tables.py               # Data table components
+│   │   │   ├── 📄 cards.py                # Card layout components
+│   │   │   ├── 📄 forms.py                # Form input components
+│   │   │   └── 📄 modals.py               # Modal dialog components
+│   │   ├── 📂 state/                      # Reflex state management
+│   │   │   ├── 📄 __init__.py             # State module initialization
+│   │   │   ├── 📄 base_state.py           # Base state class with DB connection
+│   │   │   ├── 📄 options_state.py        # Options analytics state
+│   │   │   ├── 📄 portfolio_state.py      # Portfolio management state
+│   │   │   ├── 📄 risk_state.py           # Risk analytics state
+│   │   │   └── 📄 strategy_state.py       # Strategy suggestions state
+│   │   └── 📂 styles/                     # Reflex styling and themes
+│   │       ├── 📄 __init__.py             # Styles module initialization
+│   │       ├── 📄 theme.py                # Dark royal purple theme configuration
+│   │       ├── 📄 colors.py               # Color palette definitions
+│   │       └── 📄 layout.py               # Layout utility functions
+│   │
+│   ├── 📂 core/                           # Core utilities and infrastructure
+│   │   ├── 📄 __init__.py                 # Core module initialization
+│   │   ├── 📄 config.py                   # Configuration management
+│   │   ├── 📄 logging.py                  # Logging framework setup
+│   │   ├── 📄 exceptions.py               # Custom exception classes
+│   │   ├── 📂 database/                   # MongoDB database layer
+│   │   │   ├── 📄 __init__.py             # Database module initialization
+│   │   │   ├── 📄 connection.py           # MongoDB connection management
+│   │   │   ├── 📄 models.py               # Database schema models
+│   │   │   ├── 📄 operations.py           # Database operations (CRUD)
+│   │   │   ├── 📄 migrations.py           # Database migration scripts
+│   │   │   └── 📄 indexes.py              # Database index definitions
+│   │   └── 📂 utils/                      # Utility functions
+│   │       ├── 📄 __init__.py             # Utils module initialization
+│   │       ├── 📄 time_utils.py           # CRITICAL: Fixed time calculations
+│   │       ├── 📄 math_utils.py           # Financial mathematics utilities
+│   │       ├── 📄 validation.py           # Data validation functions
+│   │       ├── 📄 crypto_sectors.py       # Crypto sectors configuration
+│   │       └── 📄 api_utils.py            # API helper functions
+│   │
+│   ├── 📂 data/                           # Data collection and processing
+│   │   ├── 📄 __init__.py                 # Data module initialization
+│   │   ├── 📂 collectors/                 # Data collection classes
+│   │   │   ├── 📄 __init__.py             # Collectors module initialization
+│   │   │   ├── 📄 base_collector.py       # Abstract base collector class
+│   │   │   ├── 📄 crypto_collector.py     # yfinance crypto data collector
+│   │   │   ├── 📄 deribit_collector.py    # Deribit options data collector
+│   │   │   └── 📄 data_manager.py         # Data coordination and management
+│   │   ├── 📂 processors/                 # Data processing and cleaning
+│   │   │   ├── 📄 __init__.py             # Processors module initialization
+│   │   │   ├── 📄 options_processor.py    # Options data processing
+│   │   │   ├── 📄 crypto_processor.py     # Crypto price data processing
+│   │   │   ├── 📄 volatility_processor.py # Volatility data processing
+│   │   │   └── 📄 data_cleaner.py         # Data validation and cleaning
+│   │   └── 📂 storage/                    # Data storage and caching
+│   │       ├── 📄 __init__.py             # Storage module initialization
+│   │       ├── 📄 cache_manager.py        # Redis caching management
+│   │       └── 📄 data_store.py           # MongoDB data storage operations
+│   │
+│   ├── 📂 models/                         # Financial models and ML
+│   │   ├── 📄 __init__.py                 # Models module initialization
+│   │   ├── 📂 options/                    # Options pricing models
+│   │   │   ├── 📄 __init__.py             # Options module initialization
+│   │   │   ├── 📄 crypto_black_scholes.py # Coin-based Black-Scholes engine
+│   │   │   ├── 📄 greeks_calculator.py    # Crypto-adjusted Greeks calculations
+│   │   │   ├── 📄 implied_volatility.py   # IV extraction algorithms
+│   │   │   └── 📄 options_chain.py        # Options chain analysis
+│   │   ├── 📂 volatility/                 # Volatility modeling
+│   │   │   ├── 📄 __init__.py             # Volatility module initialization
+│   │   │   ├── 📄 ml_models.py            # Machine learning models (FIXED)
+│   │   │   ├── 📄 statistical_models.py   # Statistical volatility models
+│   │   │   ├── 📄 garch_models.py         # GARCH family models
+│   │   │   └── 📄 ensemble_models.py      # Model ensemble methods
+│   │   └── 📂 portfolio/                  # Portfolio optimization models
+│   │       ├── 📄 __init__.py             # Portfolio module initialization
+│   │       ├── 📄 riskfolio_integration.py# riskfolio-lib integration
+│   │       ├── 📄 allocation_models.py    # HRP/HERC allocation algorithms
+│   │       ├── 📄 optimization.py         # Portfolio optimization engines
+│   │       └── 📄 crypto_sectors.py       # Crypto sector-based allocation
+│   │
+│   ├── 📂 analytics/                      # Analysis and calculations
+│   │   ├── 📄 __init__.py                 # Analytics module initialization
+│   │   ├── 📂 options/                    # Options analytics
+│   │   │   ├── 📄 __init__.py             # Options analytics initialization
+│   │   │   ├── 📄 chain_analyzer.py       # Options chain analysis
+│   │   │   ├── 📄 crypto_strategy_analyzer.py # Crypto options strategy analysis
+│   │   │   ├── 📄 flow_analyzer.py        # Options flow analysis
+│   │   │   └── 📄 pnl_calculator.py       # Coin-based P&L calculations
+│   │   ├── 📂 volatility/                 # Volatility analytics
+│   │   │   ├── 📄 __init__.py             # Volatility analytics initialization
+│   │   │   ├── 📄 surface_builder.py      # Volatility surface construction
+│   │   │   ├── 📄 iv_rv_analyzer.py       # IV vs RV analysis
+│   │   │   ├── 📄 forecasting_engine.py   # Volatility forecasting
+│   │   │   └── 📄 clustering_analyzer.py  # Volatility clustering
+│   │   ├── 📂 risk/                       # Risk analytics (riskfolio-lib)
+│   │   │   ├── 📄 __init__.py             # Risk analytics initialization
+│   │   │   ├── 📄 riskfolio_analyzer.py   # riskfolio-lib integration
+│   │   │   ├── 📄 quantstats_analyzer.py  # quantstats integration
+│   │   │   ├── 📄 var_calculator.py       # Value at Risk calculations
+│   │   │   ├── 📄 cvar_calculator.py      # Conditional VaR calculations
+│   │   │   ├── 📄 gamma_exposure.py       # Gamma exposure calculations
+│   │   │   └── 📄 stress_testing.py       # Stress testing framework
+│   │   ├── 📂 strategies/                 # Strategy analysis
+│   │   │   ├── 📄 __init__.py             # Strategies module initialization
+│   │   │   ├── 📄 rule_based_engine.py    # Rule-based strategy suggestions
+│   │   │   ├── 📄 options_strategies.py   # Options strategy implementations
+│   │   │   ├── 📄 portfolio_strategies.py # Portfolio strategy recommendations
+│   │   │   └── 📄 backtesting_engine.py   # Strategy backtesting framework
+│   │   └── 📂 performance/                # Performance analytics
+│   │       ├── 📄 __init__.py             # Performance module initialization
+│   │       ├── 📄 quantstats_integration.py # quantstats performance metrics
+│   │       ├── 📄 attribution_analysis.py # Performance attribution
+│   │       └── 📄 benchmark_comparison.py # Benchmark comparison tools
+│   │
+│   └── 📂 api/                            # API endpoints (Future expansion)
+│       ├── 📄 __init__.py                 # API module initialization
+│       ├── 📄 main.py                     # FastAPI main application
+│       ├── 📄 endpoints.py                # API endpoints
+│       ├── 📄 auth.py                     # Authentication
+│       └── 📄 models.py                   # API data models
+│
+├── 📂 tests/                              # Test suite
+│   ├── 📄 __init__.py                     # Tests module initialization
+│   ├── 📄 conftest.py                     # Pytest configuration
+│   ├── 📂 unit/                           # Unit tests
+│   │   ├── 📄 __init__.py                 # Unit tests initialization
+│   │   ├── 📂 core/                       # Core module tests
+│   │   │   ├── 📄 test_time_utils.py      # CRITICAL: Time calculation tests
+│   │   │   ├── 📄 test_config.py          # Configuration tests
+│   │   │   ├── 📄 test_database.py        # Database operations tests
+│   │   │   ├── 📄 test_math_utils.py      # Math utilities tests
+│   │   │   └── 📄 test_crypto_sectors.py  # Crypto sectors configuration tests
+│   │   ├── 📂 data/                       # Data module tests
+│   │   │   ├── 📄 test_crypto_collector.py# Crypto collector tests
+│   │   │   ├── 📄 test_deribit_collector.py# Deribit collector tests
+│   │   │   └── 📄 test_data_processing.py # Data processing tests
+│   │   ├── 📂 models/                     # Models tests
+│   │   │   ├── 📄 test_crypto_black_scholes.py # Crypto Black-Scholes tests
+│   │   │   ├── 📄 test_crypto_greeks.py   # Crypto Greeks calculation tests
+│   │   │   ├── 📄 test_ml_models.py       # ML models tests (FIXED)
+│   │   │   ├── 📄 test_riskfolio.py       # riskfolio-lib integration tests
+│   │   │   └── 📄 test_portfolio.py       # Portfolio optimization tests
+│   │   ├── 📂 analytics/                  # Analytics tests
+│   │   │   ├── 📄 test_volatility.py      # Volatility analytics tests
+│   │   │   ├── 📄 test_risk.py            # Risk analytics tests
+│   │   │   ├── 📄 test_quantstats.py      # quantstats integration tests
+│   │   │   └── 📄 test_strategies.py      # Strategy analysis tests
+│   │   └── 📂 reflex/                     # Reflex application tests
+│   │       ├── 📄 test_components.py      # Component tests
+│   │       ├── 📄 test_state.py           # State management tests
+│   │       └── 📄 test_pages.py           # Page rendering tests
+│   ├── 📂 integration/                    # Integration tests
+│   │   ├── 📄 __init__.py                 # Integration tests initialization
+│   │   ├── 📄 test_database_integration.py # Database integration tests
+│   │   ├── 📄 test_data_pipeline.py       # Data pipeline integration
+│   │   ├── 📄 test_options_analytics.py   # Options analytics integration
+│   │   ├── 📄 test_reflex_app.py          # Full Reflex app integration
+│   │   └── 📄 test_docker_deployment.py   # Docker deployment tests
+│   └── 📂 fixtures/                       # Test fixtures and data
+│       ├── 📄 __init__.py                 # Fixtures initialization
+│       ├── 📄 sample_options_data.json    # Sample Deribit options data
+│       ├── 📄 sample_crypto_prices.csv    # Sample cryptocurrency prices
+│       ├── 📄 crypto_sectors_test.json    # Test crypto sectors data
+│       └── 📄 benchmark_results.json      # Benchmark test results
+│
+├── 📂 config/                             # Configuration files
+│   ├── 📄 crypto_sectors.json             # Crypto sector classification (from knowledge)
+│   ├── 📄 database_config.yaml            # MongoDB configuration
+│   ├── 📄 api_config.yaml                 # API configuration settings
+│   ├── 📄 reflex_config.yaml              # Reflex-specific configuration
+│   ├── 📄 riskfolio_config.yaml           # riskfolio-lib settings
+│   └── 📄 logging_config.yaml             # Logging configuration
+│
+├── 📂 docs/                               # Documentation
+│   ├── 📄 README.md                       # Documentation index
+│   ├── 📄 installation.md                 # Installation guide (pip & conda)
+│   ├── 📄 docker_setup.md                 # Docker setup instructions
+│   ├── 📄 database_setup.md               # MongoDB setup guide
+│   ├── 📄 reflex_development.md           # Reflex development guide
+│   ├── 📄 user_guide.md                   # User manual
+│   ├── 📄 api_reference.md                # API documentation
+│   ├── 📄 crypto_options_guide.md         # Coin-based options explanation
+│   ├── 📄 risk_management.md              # riskfolio-lib usage guide
+│   ├── 📄 technical_architecture.md       # Technical architecture
+│   ├── 📄 development_guide.md            # Development guidelines
+│   ├── 📄 deployment_guide.md             # Deployment instructions
+│   └── 📂 examples/                       # Usage examples
+│       ├── 📄 options_analysis_example.py # Options analysis example
+│       ├── 📄 portfolio_optimization_example.py # Portfolio example
+│       ├── 📄 risk_analysis_example.py    # Risk analysis example
+│       └── 📄 reflex_component_example.py # Reflex component example
+│
+├── 📂 scripts/                            # Utility scripts
+│   ├── 📄 setup_environment.py            # Environment setup
+│   ├── 📄 database_init.py                # Database initialization
+│   ├── 📄 data_collection.py              # Data collection script
+│   ├── 📄 migrate_to_cloud.py             # Cloud migration script
+│   ├── 📄 performance_testing.py          # Performance testing
+│   └── 📄 deployment.py                   # Deployment script
+│
+├── 📂 docker/                             # Docker configuration files
+│   ├── 📄 Dockerfile.dev                  # Development Dockerfile
+│   ├── 📄 Dockerfile.prod                 # Production Dockerfile
+│   ├── 📄 docker-entrypoint.sh            # Docker entrypoint script
+│   └── 📂 mongodb/                        # MongoDB Docker configuration
+│       ├── 📄 init-mongo.js               # MongoDB initialization script
+│       └── 📄 mongo.conf                  # MongoDB configuration
+│
+├── 📂 notebooks/                          # Jupyter notebooks (optional)
+│   ├── 📄 crypto_options_research.ipynb   # Crypto options research
+│   ├── 📄 volatility_analysis.ipynb       # Volatility analysis research
+│   ├── 📄 risk_modeling.ipynb             # Risk modeling experiments
+│   └── 📄 strategy_development.ipynb      # Strategy development
+│
+└── 📂 .github/                            # GitHub configuration
+    ├── 📂 workflows/                      # GitHub Actions
+    │   ├── 📄 tests.yml                   # Automated testing
+    │   ├── 📄 docker_build.yml            # Docker build and push
+    │   ├── 📄 linting.yml                 # Code linting
+    │   └── 📄 deployment.yml              # Deployment workflow
+    └── 📄 ISSUE_TEMPLATE.md               # Issue template
+```
+
+---
+
+## CRITICAL FILES DETAILED SPECIFICATION
+
+### **REFLEX APPLICATION FILES**
+
+#### **1. src/qortfolio/qortfolio.py** - Main Reflex App
+**Purpose:** Main Reflex application entry point with dark royal purple theme  
+**Priority:** CRITICAL - Primary user interface  
+**Dependencies:** MongoDB, Reflex.dev  
+
+```python
+# Copyright (c) 2025 Seyed Mohammad Hossein Fasihi (Mhmd Fasihi)
+# This file is part of a project licensed under AGPLv3 or a commercial license.
+# AGPLv3: https://www.gnu.org/licenses/agpl-3.0.html
+# Contact for commercial licensing: mhmd.fasihi@gmail.com
+
+"""
+Qortfolio V2 Main Reflex Application
+Professional quantitative finance platform with dark royal purple theme
+"""
+
+import reflex as rx
+from .pages import (
+    index,
+    options_analytics,
+    volatility_analysis,
+    portfolio_management,
+    risk_dashboard,
+    strategy_suggestions
+)
+from .styles.theme import get_theme_config
+
+def create_app() -> rx.App:
+    """Create and configure the main Reflex application"""
+    
+    # Initialize app with dark royal purple theme
+    app = rx.App(
+        theme=rx.theme(**get_theme_config()),
+        stylesheets=[
+            "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+        ]
+    )
+    
+    # Add pages
+    app.add_page(index.page, route="/", title="Qortfolio V2 - Home")
+    app.add_page(options_analytics.page, route="/options", title="Options Analytics")
+    app.add_page(volatility_analysis.page, route="/volatility", title="Volatility Analysis")
+    app.add_page(portfolio_management.page, route="/portfolio", title="Portfolio Management")
+    app.add_page(risk_dashboard.page, route="/risk", title="Risk Dashboard")
+    app.add_page(strategy_suggestions.page, route="/strategies", title="Strategy Suggestions")
+    
+    return app
+
+# Create the app instance
+app = create_app()
+
+# Add custom CSS for dark royal purple theme
+app.add_custom_head_html("""
+<style>
+    :root {
+        --primary-color: #4C1D95;
+        --secondary-color: #7C3AED;
+        --background-color: #1F1B24;
+        --text-color: #E5E7EB;
+        --accent-color: #A855F7;
+        --card-background: #2D1B3D;
+        --border-color: #4C1D95;
+    }
+    
+    body {
+        background-color: var(--background-color);
+        color: var(--text-color);
+        font-family: 'Inter', sans-serif;
+    }
+    
+    .rx-Card {
+        background-color: var(--card-background);
+        border: 1px solid var(--border-color);
+    }
+    
+    .rx-Button {
+        background-color: var(--primary-color);
+        color: var(--text-color);
+        border: none;
+    }
+    
+    .rx-Button:hover {
+        background-color: var(--secondary-color);
+    }
+</style>
+""")
+```
+
+#### **2. src/qortfolio/styles/theme.py** - Theme Configuration
+**Purpose:** Dark royal purple theme configuration  
+**Priority:** HIGH - Visual identity  
+
+```python
+# Copyright (c) 2025 Seyed Mohammad Hossein Fasihi (Mhmd Fasihi)
+# This file is part of a project licensed under AGPLv3 or a commercial license.
+# AGPLv3: https://www.gnu.org/licenses/agpl-3.0.html
+# Contact for commercial licensing: mhmd.fasihi@gmail.com
+
+"""
+Dark Royal Purple Theme Configuration for Qortfolio V2
+Minimal design with professional financial styling
+"""
+
+def get_theme_config() -> dict:
+    """
+    Get Reflex theme configuration for dark royal purple theme
+    
+    Color Palette:
+    - Primary: #4C1D95 (Dark purple)
+    - Secondary: #7C3AED (Medium purple)
+    - Background: #1F1B24 (Very dark purple)
+    - Text: #E5E7EB (Light gray)
+    - Accent: #A855F7 (Bright purple)
+    """
+    return {
+        "appearance": "dark",
+        "accent_color": "purple",
+        "gray_color": "slate", 
+        "radius": "medium",
+        "scaling": "100%"
+    }
+
+# Color definitions
+COLORS = {
+    "primary": "#4C1D95",      # Dark purple
+    "secondary": "#7C3AED",    # Medium purple
+    "background": "#1F1B24",   # Very dark purple
+    "text": "#E5E7EB",         # Light gray
+    "accent": "#A855F7",       # Bright purple
+    "card_bg": "#2D1B3D",      # Card background
+    "border": "#4C1D95",       # Border color
+    "success": "#10B981",      # Green for positive values
+    "danger": "#EF4444",       # Red for negative values
+    "warning": "#F59E0B",      # Amber for warnings
+    "info": "#3B82F6"          # Blue for information
+}
+
+# Typography
+TYPOGRAPHY = {
+    "font_family": "'Inter', sans-serif",
+    "heading_sizes": {
+        "h1": "2.5rem",
+        "h2": "2rem", 
+        "h3": "1.5rem",
+        "h4": "1.25rem"
+    },
+    "font_weights": {
+        "normal": "400",
+        "medium": "500",
+        "semibold": "600",
+        "bold": "700"
+    }
+}
+
+# Component styles
+COMPONENT_STYLES = {
+    "card": {
+        "background_color": COLORS["card_bg"],
+        "border": f"1px solid {COLORS['border']}",
+        "border_radius": "8px",
+        "padding": "1.5rem"
+    },
+    "button_primary": {
+        "background_color": COLORS["primary"],
+        "color": COLORS["text"],
+        "border": "none",
+        "padding": "0.75rem 1.5rem",
+        "border_radius": "6px",
+        "font_weight": TYPOGRAPHY["font_weights"]["medium"]
+    },
+    "button_secondary": {
+        "background_color": "transparent",
+        "color": COLORS["accent"],
+        "border": f"1px solid {COLORS['accent']}",
+        "padding": "0.75rem 1.5rem",
+        "border_radius": "6px"
+    }
+}
+```
+
+---
+
+### **DATABASE FILES**
+
+#### **3. src/core/database/connection.py** - MongoDB Connection
+**Purpose:** MongoDB connection management with Docker integration  
+**Priority:** CRITICAL - Database foundation  
+
+```python
+# Copyright (c) 2025 Seyed Mohammad Hossein Fasihi (Mhmd Fasihi)
+# This file is part of a project licensed under AGPLv3 or a commercial license.
+# AGPLv3: https://www.gnu.org/licenses/agpl-3.0.html
+# Contact for commercial licensing: mhmd.fasihi@gmail.com
+
+"""
+MongoDB Connection Management for Qortfolio V2
+Handles local development and cloud production connections
+"""
+
+import os
+import asyncio
+from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import MongoClient
+from typing import Optional
+import logging
+
+logger = logging.getLogger(__name__)
+
+class DatabaseConnection:
+    """
+    MongoDB connection manager with support for:
+    - Local development (Docker)
+    - Cloud production (MongoDB Atlas)
+    - Connection pooling and retry logic
+    """
+    
+    def __init__(self):
+        self.client: Optional[AsyncIOMotorClient] = None
+        self.database = None
+        self.connection_string = self._get_connection_string()
+        
+    def _get_connection_string(self) -> str:
+        """Get MongoDB connection string from environment"""
+        
+        # Try environment variable first
+        mongodb_url = os.getenv("MONGODB_URL")
+        if mongodb_url:
+            return mongodb_url
+            
+        # Default development connection (Docker)
+        username = os.getenv("MONGO_USERNAME", "admin")
+        password = os.getenv("MONGO_PASSWORD", "password")
+        host = os.getenv("MONGO_HOST", "localhost")
+        port = os.getenv("MONGO_PORT", "27017")
+        database_name = os.getenv("MONGO_DATABASE", "qortfolio")
+        
+        return f"mongodb://{username}:{password}@{host}:{port}/{database_name}?authSource=admin"
+    
+    async def connect(self) -> bool:
+        """Establish connection to MongoDB"""
+        try:
+            self.client = AsyncIOMotorClient(
+                self.connection_string,
+                maxPoolSize=50,
+                minPoolSize=10,
+                maxIdleTimeMS=45000,
+                connectTimeoutMS=10000,
+                serverSelectionTimeoutMS=10000
+            )
+            
+            # Test connection
+            await self.client.admin.command('ping')
+            
+            # Get database reference
+            database_name = os.getenv("MONGO_DATABASE", "qortfolio")
+            self.database = self.client[database_name]
+            
+            logger.info(f"Successfully connected to MongoDB: {database_name}")
+            
+            # Initialize collections and indexes
+            await self._initialize_collections()
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to connect to MongoDB: {e}")
+            return False
+    
+    async def _initialize_collections(self):
+        """Initialize database collections and indexes"""
+        
+        # Options data collection
+        await self.database.create_collection(
+            "options_data",
+            timeseries={
+                "timeField": "timestamp",
+                "metaField": "underlying",
+                "granularity": "seconds"
+            }
+        )
+        
+        # Create indexes for optimal query performance
+        await self.database.options_data.create_index([
+            ("underlying", 1),
+            ("timestamp", -1)
+        ])
+        
+        await self.database.options_data.create_index([
+            ("symbol", 1),
+            ("timestamp", -1)
+        ])
+        
+        # Crypto prices collection
+        await self.database.create_collection("crypto_prices")
+        await self.database.crypto_prices.create_index([
+            ("symbol", 1),
+            ("timestamp", -1)
+        ])
+        
+        # Portfolio data collection
+        await self.database.create_collection("portfolio_data")
+        await self.database.portfolio_data.create_index([
+            ("user_id", 1),
+            ("portfolio_id", 1),
+            ("timestamp", -1)
+        ])
+        
+        # Risk metrics collection
+        await self.database.create_collection("risk_metrics")
+        await self.database.risk_metrics.create_index([
+            ("portfolio_id", 1),
+            ("calculation_timestamp", -1)
+        ])
+        
+        logger.info("Database collections and indexes initialized")
+    
+    async def disconnect(self):
+        """Close database connection"""
+        if self.client:
+            self.client.close()
+            logger.info("Database connection closed")
+    
+    def get_collection(self, collection_name: str):
+        """Get collection reference"""
+        if not self.database:
+            raise RuntimeError("Database not connected")
+        return self.database[collection_name]
+
+# Global database connection instance
+db_connection = DatabaseConnection()
+
+async def get_database():
+    """Get database connection (dependency injection for Reflex state)"""
+    if not db_connection.client:
+        await db_connection.connect()
+    return db_connection.database
+```
+
+#### **4. docker-compose.yml** - Docker Configuration
+**Purpose:** Docker services orchestration for development  
+**Priority:** CRITICAL - Development environment  
+
+```yaml
+# Copyright (c) 2025 Seyed Mohammad Hossein Fasihi (Mhmd Fasihi)
+# This file is part of a project licensed under AGPLv3 or a commercial license.
+# AGPLv3: https://www.gnu.org/licenses/agpl-3.0.html
+# Contact for commercial licensing: mhmd.fasihi@gmail.com
+
+version: '3.8'
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:7.0
+    container_name: qortfolio_mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-secure_password_123}
+      MONGO_INITDB_DATABASE: qortfolio
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./docker/mongodb/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+      - ./docker/mongodb/mongo.conf:/etc/mongod.conf:ro
+    networks:
+      - qortfolio_network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Redis Cache (for future use)
+  redis:
+    image: redis:7-alpine
+    container_name: qortfolio_redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD:-redis_password_123}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - qortfolio_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Qortfolio Application
+  qortfolio_app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: qortfolio_app
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+      - "8000:8000"  # Backend API port
+    environment:
+      # Database configuration
+      - MONGODB_URL=mongodb://admin:${MONGO_PASSWORD:-secure_password_123}@mongodb:27017/qortfolio?authSource=admin
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-redis_password_123}@redis:6379/0
+      
+      # Application configuration
+      - ENVIRONMENT=development
+      - DEBUG=true
+      - LOG_LEVEL=INFO
+      
+      # API configuration
+      - DERIBIT_CLIENT_ID=${DERIBIT_CLIENT_ID:-}
+      - DERIBIT_CLIENT_SECRET=${DERIBIT_CLIENT_SECRET:-}
+      - YFINANCE_RATE_LIMIT=100
+      
+      # Reflex configuration
+      - REFLEX_HOST=0.0.0.0
+      - REFLEX_PORT=3000
+      
+    volumes:
+      - .:/app
+      - /app/node_modules  # Exclude node_modules
+    networks:
+      - qortfolio_network
+    command: >
+      sh -c "
+        echo 'Starting Qortfolio V2 Application...' &&
+        cd /app &&
+        reflex init &&
+        reflex run --host 0.0.0.0 --port 3000
+      "
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+# Named volumes for data persistence
+volumes:
+  mongodb_data:
+    driver: local
+  redis_data:
+    driver: local
+
+# Network configuration
+networks:
+  qortfolio_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+```
+
+---
+
+### **CRYPTO SECTORS CONFIGURATION**
+
+#### **5. config/crypto_sectors.json** - Crypto Sector Classification
+**Purpose:** Crypto sector classification based on existing knowledge  
+**Priority:** HIGH - Portfolio allocation foundation  
+
+```json
+{
+  "_comment": "Crypto sector classification for Qortfolio V2 portfolio allocation",
+  "_license": "Copyright (c) 2025 Seyed Mohammad Hossein Fasihi (Mhmd Fasihi) - AGPLv3 or Commercial License",
+  
+  "DeFi": {
+    "description": "Decentralized Finance protocols and applications",
+    "color": "#10B981",
+    "tickers": ["UNI", "AAVE", "CRV", "MKR", "COMP", "SNX", "ETHFI", "LDO", "RPL", "PENDLE", "ENA", "XVS", "CVX", "CAKE", "JTO", "FRAX", "RAY", "ORCA", "BAL", "GMX", "RUNE", "DYDX", "ONDO", "LQTY", "MPL", "GFI", "CFG", "JUP", "HYPE"],
+    "yfinance": ["UNI7083-USD", "AAVE-USD", "CRV-USD", "MKR-USD", "COMP5692-USD", "SNX-USD", "ETHFI-USD", "LDO-USD", "RPL-USD", "PENDLE-USD", "ENA-USD", "XVS-USD", "CVX-USD", "CAKE-USD", "JTO-USD", "FRAX-USD", "RAY-USD", "ORCA-USD", "BAL-USD", "GMX11857-USD", "RUNE-USD", "DYDX-USD", "ONDO-USD", "LQTY-USD", "MPL-USD", "GFI-USD", "CFG-USD", "JUP29210-USD", "HYPE32196-USD"],
+    "allocation_constraints": {
+      "min_weight": 0.05,
+      "max_weight": 0.25,
+      "individual_max": 0.08
+    }
+  },
+  
+  "Digital_Assets": {
+    "description": "Meme coins and digital collectibles",
+    "color": "#F59E0B",
+    "tickers": ["DOGE", "SAND", "AXS", "GALA", "ENJ", "MANA", "SHIB", "PEPE", "MEME", "TOKEN", "ORDI", "FLOKI", "ELON", "BONK", "WIF", "POPCAT", "MEW", "MOG", "BOME", "APU", "NPC", "GOAT", "YGG"],
+    "yfinance": ["DOGE-USD", "SAND-USD", "AXS-USD", "GALA-USD", "ENJ-USD", "MANA-USD", "SHIB-USD", "PEPE24478-USD", "MEME-USD", "TOKEN28299-USD", "ORDI-USD", "FLOKI-USD", "ELON-USD", "BONK-USD", "WIF-USD", "POPCAT28782-USD", "MEW30126-USD", "MOG-USD", "BOME-USD", "APU30008-USD", "NPC-USD", "GOAT33440-USD", "YGG-USD"],
+    "allocation_constraints": {
+      "min_weight": 0.02,
+      "max_weight": 0.15,
+      "individual_max": 0.03
+    }
+  },
+  
+  "Infrastructure": {
+    "description": "Layer 1 blockchains and infrastructure projects",
+    "color": "#3B82F6",
+    "tickers": ["ETH", "SOL", "ADA", "AVAX", "W", "AXL", "SYN", "LINK", "PYTH", "FLR", "NEAR", "MATIC", "ICP", "STX", "ATOM", "INJ", "FTM", "TIA", "ALGO", "FLOW", "QNT", "RON", "AIOZ", "IOTX", "IOTA", "ANT", "ANKR", "XRD", "SKL", "BICO", "FIL", "AR", "STORJ", "APT", "LPT"],
+    "yfinance": ["ETH-USD", "SOL-USD", "ADA-USD", "AVAX-USD", "W-USD", "AXL17799-USD", "SYN12147-USD", "LINK-USD", "PYTH-USD", "FLR-USD", "NEAR-USD", "MATIC-USD", "ICP-USD", "STX4847-USD", "ATOM-USD", "INJ-USD", "FTM-USD", "TIA22861-USD", "ALGO-USD", "FLOW-USD", "QNT-USD", "RON14101-USD", "AIOZ-USD", "IOTX-USD", "IOTA-USD", "ANT-USD", "ANKR-USD", "XRD-USD", "SKL-USD", "BICO-USD", "FIL-USD", "AR-USD", "STORJ-USD", "APT21794-USD", "LPT-USD"],
+    "allocation_constraints": {
+      "min_weight": 0.20,
+      "max_weight": 0.45,
+      "individual_max": 0.15
+    }
+  },
+  
+  "DApps": {
+    "description": "Decentralized applications and protocols",
+    "color": "#8B5CF6",
+    "tickers": ["LINK", "FIL", "GRT", "AR", "FET", "AKT", "HNT", "ICP", "OP", "ARB", "RENDER", "BLUR", "RUNE", "VET", "TON", "FRIEND", "TAO", "FLUX", "CTSI", "LIT", "PYTH"],
+    "yfinance": ["LINK-USD", "FIL-USD", "GRT6719-USD", "AR-USD", "FET-USD", "AKT-USD", "HNT-USD", "ICP-USD", "OP-USD", "ARB11841-USD", "RENDER-USD", "BLUR-USD", "RUNE-USD", "VET-USD", "TON-USD", "FRIEND-USD", "TAO22974-USD", "FLUX-USD", "CTSI-USD", "LIT6833-USD", "PYTH-USD"],
+    "allocation_constraints": {
+      "min_weight": 0.05,
+      "max_weight": 0.20,
+      "individual_max": 0.06
+    }
+  },
+  
+  "Privacy": {
+    "description": "Privacy-focused cryptocurrencies",
+    "color": "#6B7280",
+    "tickers": ["XMR", "MINA", "STRK", "ZEC", "DASH", "SCRT", "ZEN", "DUSK", "PHA", "KEEP", "NYM", "HOPR", "FIRO"],
+    "yfinance": ["XMR-USD", "MINA-USD", "STRK22691-USD", "ZEC-USD", "DASH-USD", "SCRT-USD", "ZEN-USD", "DUSK-USD", "PHA-USD", "KEEP-USD", "NYM-USD", "HOPR-USD", "FIRO-USD"],
+    "allocation_constraints": {
+      "min_weight": 0.02,
+      "max_weight": 0.10,
+      "individual_max": 0.03
+    }
+  },
+  
+  "Services": {
+    "description": "Service-oriented blockchain projects",
+    "color": "#EC4899",
+    "tickers": ["XRP", "XLM", "NMR", "PENDLE", "ENA", "HBAR", "XTZ", "CHR", "ONDO", "BNB", "TRX", "RSS3", "AGI", "ABT", "ATH", "AI", "NMR", "ORAI", "GPU", "WLD", "GLM", "VIRTUAL", "GRASS"],
+    "yfinance": ["XRP-USD", "XLM-USD", "NMR-USD", "PENDLE-USD", "ENA-USD", "HBAR-USD", "XTZ-USD", "CHR-USD", "ONDO-USD", "BNB-USD", "TRX-USD", "RSS3-USD", "AGI-USD", "ABT-USD", "ATH30083-USD", "AI28846-USD", "NMR-USD", "ORAI-USD", "GPU-USD", "WLD-USD", "GLM-USD", "VIRTUAL-USD", "GRASS32956-USD"],
+    "allocation_constraints": {
+      "min_weight": 0.05,
+      "max_weight": 0.20,
+      "individual_max": 0.08
+    }
+  },
+  
+  "AI": {
+    "description": "Artificial Intelligence and machine learning crypto projects",
+    "color": "#EF4444",
+    "tickers": ["NEAR", "FET", "RLC", "RENDER", "TAO", "GRT", "ARKM", "TRAC", "IO", "PAAL", "RSS3", "AGI", "ABT", "ATH", "AI", "NMR", "ORAI", "GPU", "WLD", "GLM", "VIRTUAL", "GRASS"],
+    "yfinance": ["NEAR-USD", "FET-USD", "RLC-USD", "RENDER-USD", "TAO22974-USD", "GRT6719-USD", "ARKM-USD", "TRAC-USD", "IO29835-USD", "PAAL-USD", "RSS3-USD", "AGI-USD", "ABT-USD", "ATH30083-USD", "AI28846-USD", "NMR-USD", "ORAI-USD", "GPU-USD", "WLD-USD", "GLM-USD", "VIRTUAL-USD", "GRASS32956-USD"],
+    "allocation_constraints": {
+      "min_weight": 0.05,
+      "max_weight": 0.25,
+      "individual_max": 0.08
+    }
+  },
+  
+  "portfolio_constraints": {
+    "total_assets_min": 8,
+    "total_assets_max": 20,
+    "rebalancing_threshold": 0.05,
+    "transaction_cost": 0.001,
+    "min_allocation_per_asset": 0.01,
+    "max_concentration": 0.40
+  },
+  
+  "risk_parameters": {
+    "var_confidence_level": 0.05,
+    "cvar_confidence_level": 0.05,
+    "max_portfolio_volatility": 0.60,
+    "max_drawdown_limit": 0.35,
+    "correlation_threshold": 0.85
+  }
+}
+```
+
+---
+
+### **PACKAGE MANAGEMENT FILES**
+
+#### **6. requirements.txt** - pip Dependencies
+**Purpose:** Python package dependencies for pip installation  
+**Priority:** CRITICAL - Environment setup  
+
+```txt
+# Copyright (c) 2025 Seyed Mohammad Hossein Fasihi (Mhmd Fasihi)
+# This file is part of a project licensed under AGPLv3 or a commercial license.
+# AGPLv3: https://www.gnu.org/licenses/agpl-3.0.html
+# Contact for commercial licensing: mhmd.fasihi@gmail.com
+
+# Core Framework
+reflex>=0.4.0
+motor>=3.3.0
+pymongo>=4.6.0
+
+# Financial Analytics Libraries
+riskfolio-lib>=6.0.0
+quantstats>=0.0.62
+yfinance>=0.2.18
+
+# Data Processing
+pandas>=2.1.0
+numpy>=1.24.0
+scipy>=1.11.0
+
+# Machine Learning (Fixed models)
+scikit-learn>=1.3.0
+tensorflow>=2.13.0
+torch>=2.0.0
+
+# Mathematical Libraries
+sympy>=1.12.0
+statsmodels>=0.14.0
+
+# API and Networking
+aiohttp>=3.9.0
+websockets>=12.0
+requests>=2.31.0
+
+# Database and Caching
+redis>=5.0.0
+python-dotenv>=1.0.0
+
+# Data Visualization (Reflex integration)
+plotly>=5.17.0
+matplotlib>=3.7.0
+
+# Configuration and Utilities
+pyyaml>=6.0.1
+click>=8.1.0
+python-dateutil>=2.8.0
+pytz>=2023.3
+
+# Development and Testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+black>=23.9.0
+mypy>=1.6.0
+isort>=5.12.0
+flake8>=6.1.0
+
+# Performance and Monitoring
+structlog>=23.2.0
+psutil>=5.9.0
+
+# Deployment
+gunicorn>=21.2.0
+uvicorn>=0.24.0
+
+# Documentation
+sphinx>=7.2.0
+sphinx-rtd-theme>=1.3.0
+```
+
+#### **7. environment.yml** - conda Dependencies
+**Purpose:** Conda environment specification  
+**Priority:** CRITICAL - Alternative environment setup  
+
+```yaml
+# Copyright (c) 2025 Seyed Mohammad Hossein Fasihi (Mhmd Fasihi)
+# This file is part of a project licensed under AGPLv3 or a commercial license.
+# AGPLv3: https://www.gnu.org/licenses/agpl-3.0.html
+# Contact for commercial licensing: mhmd.fasihi@gmail.com
+
+name: qortfolio-v2
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  # Base Python
+  - python>=3.11
+  
+  # Core Scientific Computing
+  - pandas>=2.1.0
+  - numpy>=1.24.0
+  - scipy>=1.11.0
+  - matplotlib>=3.7.0
+  - plotly>=5.17.0
+  
+  # Database
+  - pymongo>=4.6.0
+  - redis-py>=5.0.0
+  
+  # Machine Learning
+  - scikit-learn>=1.3.0
+  - tensorflow>=2.13.0
+  - pytorch>=2.0.0
+  
+  # Statistical Analysis
+  - statsmodels>=0.14.0
+  - sympy>=1.12.0
+  
+  # Networking and APIs
+  - aiohttp>=3.9.0
+  - requests>=2.31.0
+  
+  # Utilities
+  - pyyaml>=6.0.1
+  - python-dotenv>=1.0.0
+  - click>=8.1.0
+  - python-dateutil>=2.8.0
+  - pytz>=2023.3
+  
+  # Development Tools
+  - pytest>=7.4.0
+  - black>=23.9.0
+  - mypy>=1.6.0
+  - isort>=5.12.0
+  - flake8>=6.1.0
+  
+  # Documentation
+  - sphinx>=7.2.0
+  
+  # pip dependencies (not available in conda)
+  - pip
+  - pip:
+    # Reflex Framework
+    - reflex>=0.4.0
+    - motor>=3.3.0
+    
+    # Financial Libraries
+    - riskfolio-lib>=6.0.0
+    - quantstats>=0.0.62
+    - yfinance>=0.2.18
+    
+    # WebSocket support
+    - websockets>=12.0
+    
+    # Testing
+    - pytest-asyncio>=0.21.0
+    - pytest-cov>=4.1.0
+    
+    # Performance
+    - structlog>=23.2.0
+    - psutil>=5.9.0
+    
+    # Deployment
+    - gunicorn>=21.2.0
+    - uvicorn>=0.24.0
+```
+
+---
+
+### **CORE UTILITY FILES**
+
+#### **8. src/core/utils/time_utils.py** - Fixed Time Calculations
+**Purpose:** CRITICAL time calculation fixes for options pricing  
+**Priority:** CRITICAL - Must be implemented first  
+
+```python
+# Copyright (c) 2025 Seyed Mohammad Hossein Fasihi (Mhmd Fasihi)
+# This file is part of a project licensed under AGPLv3 or a commercial license.
+# AGPLv3: https://www.gnu.org/licenses/agpl-3.0.html
+# Contact for commercial licensing: mhmd.fasihi@gmail.com
+
+"""
+Time utilities for financial calculations
+CRITICAL: Contains fix for legacy time-to-maturity calculation bug
+
+This module provides accurate time calculations for options pricing,
+fixing the mathematical error from legacy repositories.
+"""
+
+from datetime import datetime, timedelta, timezone
+from typing import Union, Optional
+import calendar
+import numpy as np
+
+
+class TimeUtils:
+    """
+    Time calculation utilities for financial applications
+    
+    CRITICAL FIXES:
+    - Correct time-to-maturity calculation
+    - Proper business day handling
+    - Timezone-aware calculations
+    """
+    
+    @staticmethod
+    def calculate_time_to_maturity(current_time: datetime, 
+                                 expiry_time: datetime) -> float:
+        """
+        Calculate time to maturity in years (FIXED VERSION)
+        
+        CRITICAL FIX: 
+        - OLD BUG: time_diff.total_seconds() / 31536000 * 365
+        - CORRECT: time_diff.total_seconds() / (365.25 * 24 * 3600)
+        
+        Args:
+            current_time: Current timestamp
+            expiry_time: Option expiry timestamp
+            
+        Returns:
+            Time to maturity in years (float)
+            
+        Raises:
+            ValueError: If expiry_time <= current_time
+            
+        Example:
+            >>> current = datetime(2025, 1, 1, 9, 30, 0)
+            >>> expiry = datetime(2025, 2, 1, 9, 30, 0)  # 31 days later
+            >>> time_to_maturity = calculate_time_to_maturity(current, expiry)
+            >>> assert abs(time_to_maturity - (31/365.25)) < 1e-10
+        """
+        if expiry_time <= current_time:
+            return 0.0
+            
+        time_diff = expiry_time - current_time
+        
+        # CRITICAL: Use exact calendar calculation
+        # 365.25 accounts for leap years
+        # 24 * 3600 = seconds per day
+        seconds_per_year = 365.25 * 24 * 3600
+        
+        return time_diff.total_seconds() / seconds_per_year
+    
+    @staticmethod
+    def calculate_business_days_to_maturity(current_time: datetime,
+                                          expiry_time: datetime,
+                                          holidays: Optional[list] = None) -> float:
+        """
+        Calculate business days to maturity (for more accurate options pricing)
+        
+        Args:
+            current_time: Current timestamp
+            expiry_time: Option expiry timestamp
+            holidays: List of holiday dates to exclude
+            
+        Returns:
+            Business days to maturity in years
+        """
+        if expiry_time <= current_time:
+            return 0.0
+            
+        # Calculate business days
+        business_days = 0
+        current_date = current_time.date()
+        expiry_date = expiry_time.date()
+        
+        # Iterate through each day
+        while current_date < expiry_date:
+            current_date += timedelta(days=1)
+            
+            # Skip weekends
+            if current_date.weekday() < 5:  # Monday = 0, Friday = 4
+                # Skip holidays if provided
+                if holidays is None or current_date not in holidays:
+                    business_days += 1
+        
+        # Convert to years (approximately 252 business days per year)
+        return business_days / 252.0
+    
+    @staticmethod
+    def get_next_expiry_date(current_date: datetime,
+                           expiry_type: str = "monthly") -> datetime:
+        """
+        Get next options expiry date
+        
+        Args:
+            current_date: Current date
+            expiry_type: "weekly" or "monthly"
+            
+        Returns:
+            Next expiry datetime (usually 8:00 UTC for crypto options)
+        """
+        if expiry_type == "weekly":
+            # Next Friday
+            days_until_friday = (4 - current_date.weekday()) % 7
+            if days_until_friday == 0:  # If today is Friday
+                days_until_friday = 7  # Next Friday
+            
+            next_expiry = current_date + timedelta(days=days_until_friday)
+            
+        elif expiry_type == "monthly":
+            # Last Friday of current month, or next month if passed
+            year = current_date.year
+            month = current_date.month
+            
+            # Get last day of month
+            last_day = calendar.monthrange(year, month)[1]
+            last_date = datetime(year, month, last_day)
+            
+            # Find last Friday
+            days_back = (last_date.weekday() - 4) % 7
+            last_friday = last_date - timedelta(days=days_back)
+            
+            # If we've passed this month's expiry, get next month's
+            if current_date.date() >= last_friday.date():
+                if month == 12:
+                    year += 1
+                    month = 1
+                else:
+                    month += 1
+                    
+                last_day = calendar.monthrange(year, month)[1]
+                last_date = datetime(year, month, last_day)
+                days_back = (last_date.weekday() - 4) % 7
+                last_friday = last_date - timedelta(days=days_back)
+            
+            next_expiry = last_friday
+        else:
+            raise ValueError("expiry_type must be 'weekly' or 'monthly'")
+        
+        # Set expiry time to 8:00 UTC (typical for crypto options)
+        return next_expiry.replace(hour=8, minute=0, second=0, microsecond=0)
+    
+    @staticmethod
+    def parse_deribit_timestamp(timestamp_ms: int) -> datetime:
+        """
+        Parse Deribit timestamp (milliseconds since epoch) to datetime
+        
+        Args:
+            timestamp_ms: Timestamp in milliseconds
+            
+        Returns:
+            UTC datetime object
+        """
+        return datetime.fromtimestamp(timestamp_ms / 1000, tz=timezone.utc)
+    
+    @staticmethod
+    def to_deribit_timestamp(dt: datetime) -> int:
+        """
+        Convert datetime to Deribit timestamp format (milliseconds)
+        
+        Args:
+            dt: Datetime object
+            
+        Returns:
+            Timestamp in milliseconds
+        """
+        return int(dt.timestamp() * 1000)
+    
+    @staticmethod
+    def is_market_hours(timestamp: datetime,
+                       market: str = "crypto") -> bool:
+        """
+        Check if given timestamp is during market hours
+        
+        Args:
+            timestamp: Timestamp to check
+            market: "crypto" (24/7) or "traditional" (9:30-16:00 ET)
+            
+        Returns:
+            True if market is open
+        """
+        if market == "crypto":
+            return True  # Crypto markets are 24/7
+        
+        elif market == "traditional":
+            # Convert to ET timezone
+            et_time = timestamp.astimezone(timezone(timedelta(hours=-5)))  # EST
+            
+            # Check if weekday and within trading hours
+            if et_time.weekday() < 5:  # Monday-Friday
+                trading_start = et_time.replace(hour=9, minute=30, second=0)
+                trading_end = et_time.replace(hour=16, minute=0, second=0)
+                return trading_start <= et_time <= trading_end
+            
+            return False
+        
+        else:
+            raise ValueError("market must be 'crypto' or 'traditional'")
+    
+    @staticmethod
+    def annualize_returns(returns: np.ndarray,
+                         frequency: str = "daily") -> np.ndarray:
+        """
+        Annualize returns array
+        
+        Args:
+            returns: Array of returns
+            frequency: "daily", "weekly", "monthly"
+            
+        Returns:
+            Annualized returns
+        """
+        if frequency == "daily":
+            return returns * np.sqrt(365)
+        elif frequency == "weekly":
+            return returns * np.sqrt(52)
+        elif frequency == "monthly":
+            return returns * np.sqrt(12)
+        else:
+            raise ValueError("frequency must be 'daily', 'weekly', or 'monthly'")
+
+# Validation functions for testing
+def validate_time_calculation_accuracy():
+    """
+    Validate time calculation accuracy against known benchmarks
+    Used in testing to ensure mathematical correctness
+    """
+    test_cases = [
+        {
+            'current': datetime(2025, 1, 1, 0, 0, 0),
+            'expiry': datetime(2025, 1, 31, 0, 0, 0),  # 30 days
+            'expected': 30 / 365.25
+        },
+        {
+            'current': datetime(2025, 1, 1, 0, 0, 0),
+            'expiry': datetime(2025, 12, 31, 0, 0, 0),  # ~365 days
+            'expected': 364 / 365.25  # 364 days difference
+        },
+        {
+            'current': datetime(2024, 1, 1, 0, 0, 0),  # Leap year
+            'expiry': datetime(2024, 12, 31, 0, 0, 0),  # 365 days (leap year)
+            'expected': 365 / 365.25
+        }
+    ]
+    
+    for i, case in enumerate(test_cases):
+        calculated = TimeUtils.calculate_time_to_maturity(
+            case['current'], case['expiry']
+        )
+        
+        error = abs(calculated - case['expected'])
+        assert error < 1e-10, f"Test case {i+1} failed: error = {error}"
+    
+    print("All time calculation validation tests passed!")
+
+if __name__ == "__main__":
+    validate_time_calculation_accuracy()
+```
+
+**Testing Requirements:**
+- Test against 100+ known benchmark values  
+- Validate edge cases (weekends, holidays, leap years)
+- Performance test for real-time calculations
+- Cross-validate against external sources
+
+---
+
+## DEVELOPMENT WORKFLOW BY PRIORITY
+
+### **CRITICAL PATH FILES (Week 1)**
+1. **docker-compose.yml** - Environment setup
+2. **src/core/database/connection.py** - Database foundation
+3. **src/core/utils/time_utils.py** - Critical bug fix
+4. **config/crypto_sectors.json** - Sector configuration
+5. **src/qortfolio/qortfolio.py** - Reflex app foundation
+
+### **HIGH PRIORITY FILES (Week 2-3)**
+1. **src/models/options/crypto_black_scholes.py** - Coin-based pricing
+2. **src/analytics/risk/riskfolio_analyzer.py** - riskfolio-lib integration
+3. **src/qortfolio/pages/options_analytics.py** - Main options page
+4. **src/qortfolio/styles/theme.py** - Dark royal purple theme
+5. **src/data/collectors/deribit_collector.py** - Real-time data
+
+### **MEDIUM PRIORITY FILES (Week 4-6)**
+1. **src/analytics/performance/quantstats_integration.py** - Performance metrics
+2. **src/analytics/strategies/rule_based_engine.py** - Strategy suggestions
+3. **src/qortfolio/pages/risk_dashboard.py** - Risk monitoring
+4. **src/models/portfolio/crypto_sectors.py** - Sector-based allocation
+5. **tests/** - Comprehensive testing suite
+
+### **File Creation Standards**
+```python
+# Standard header for all files
+# Copyright (c) 2025 Seyed Mohammad Hossein Fasihi (Mhmd Fasihi)
+# This file is part of a project licensed under AGPLv3 or a commercial license.
+# AGPLv3: https://www.gnu.org/licenses/agpl-3.0.html
+# Contact for commercial licensing: mhmd.fasihi@gmail.com
+
+"""
+Module description and purpose
+Brief explanation of functionality and role in the system
+"""
+
+# Imports with type hints
+from typing import Dict, List, Optional, Union
+import asyncio
+import logging
+
+# Get logger for this module
+logger = logging.getLogger(__name__)
+
+# Module implementation...
+```
+
+---
+
+**This comprehensive project structure ensures systematic development with DATABASE (MongoDB), REFLEX dashboard, coin-based crypto options mathematics, riskfolio-lib/quantstats integration, and support for both pip and conda environments, delivering a professional quantitative finance platform.**
+
