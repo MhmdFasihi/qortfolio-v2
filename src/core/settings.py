@@ -30,11 +30,30 @@ class DatabaseConfig:
     username: str
     password: str
     database: str
+    auth_source: str
+    uri: Optional[str] = None
     
     @property
     def connection_string(self) -> str:
-        """Generate MongoDB connection string."""
-        return f"mongodb://{self.username}:{self.password}@{self.host}:{self.port}/{self.database}?authSource=admin"
+        """Generate MongoDB connection string.
+
+        Priority:
+        1) If `uri` (env `MONGODB_URL`) is set, return it as-is.
+        2) If username/password are provided, include them and use `auth_source`.
+        3) Otherwise build a no-auth local URI.
+        """
+        if self.uri:
+            return self.uri
+
+        user = (self.username or "").strip()
+        pwd = (self.password or "").strip()
+        if user and pwd:
+            return (
+                f"mongodb://{user}:{pwd}@{self.host}:{self.port}/"
+                f"{self.database}?authSource={self.auth_source}"
+            )
+        # No credentials -> no-auth local MongoDB
+        return f"mongodb://{self.host}:{self.port}/{self.database}"
 
 @dataclass
 class APIConfig:
@@ -106,8 +125,11 @@ class Config:
             host=os.getenv("MONGO_HOST", "localhost"),
             port=int(os.getenv("MONGO_PORT", 27017)),
             username=os.getenv("MONGO_USER", "admin"),
-            password=os.getenv("MONGO_PASSWORD", "password123"),
-            database=os.getenv("MONGO_DATABASE", "qortfolio")
+            # Default to docker-compose default for consistency
+            password=os.getenv("MONGO_PASSWORD", "secure_password_123"),
+            database=os.getenv("MONGO_DATABASE", "qortfolio"),
+            auth_source=os.getenv("MONGO_AUTH_SOURCE", "admin"),
+            uri=os.getenv("MONGODB_URL")
         )
     
     def _load_redis_config(self) -> RedisConfig:
@@ -353,5 +375,3 @@ if __name__ == "__main__":
     for key, value in health.items():
         status = "✅" if value else "❌"
         print(f"   {status} {key}: {value}")
-
-

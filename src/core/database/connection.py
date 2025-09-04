@@ -20,6 +20,18 @@ from ..exceptions import DatabaseConnectionError, DatabaseOperationError
 
 logger = logging.getLogger(__name__)
 
+def _mask_mongo_uri(uri: str) -> str:
+    """Mask credentials in a MongoDB URI for safe logging."""
+    try:
+        if "://" in uri and "@" in uri:
+            scheme, rest = uri.split("://", 1)
+            if "@" in rest:
+                _, tail = rest.split("@", 1)
+                return f"{scheme}://***@{tail}"
+        return uri
+    except Exception:
+        return uri
+
 class DatabaseConnection:
     """MongoDB connection manager with async support."""
     
@@ -33,6 +45,7 @@ class DatabaseConnection:
         """Establish synchronous MongoDB connection."""
         if self.sync_client is None:
             try:
+                logger.info("Attempting MongoDB (sync) connection: %s", _mask_mongo_uri(config.database.connection_string))
                 self.sync_client = MongoClient(
                     config.database.connection_string,
                     maxPoolSize=50,
@@ -43,7 +56,13 @@ class DatabaseConnection:
                 self.sync_client.admin.command('ping')
                 self._connected = True
                 logger.info("✅ Synchronous MongoDB connection established")
-            except ConnectionFailure as e:
+            except (ConnectionFailure, OperationFailure) as e:
+                # Ensure client is closed to stop background retries
+                try:
+                    if self.sync_client is not None:
+                        self.sync_client.close()
+                finally:
+                    self.sync_client = None
                 logger.error(f"❌ Failed to connect to MongoDB: {e}")
                 raise DatabaseConnectionError(f"MongoDB connection failed: {e}")
         
@@ -53,6 +72,7 @@ class DatabaseConnection:
         """Establish asynchronous MongoDB connection."""
         if self.async_client is None:
             try:
+                logger.info("Attempting MongoDB (async) connection: %s", _mask_mongo_uri(config.database.connection_string))
                 self.async_client = motor.motor_asyncio.AsyncIOMotorClient(
                     config.database.connection_string,
                     maxPoolSize=50,
@@ -64,6 +84,12 @@ class DatabaseConnection:
                 self._connected = True
                 logger.info("✅ Asynchronous MongoDB connection established")
             except Exception as e:
+                # Ensure client is closed to stop background retries
+                try:
+                    if self.async_client is not None:
+                        self.async_client.close()
+                finally:
+                    self.async_client = None
                 logger.error(f"❌ Failed to connect to MongoDB: {e}")
                 raise DatabaseConnectionError(f"MongoDB connection failed: {e}")
         
@@ -96,6 +122,17 @@ class DatabaseConnection:
     def is_connected(self) -> bool:
         """Check if connected to MongoDB."""
         return self._connected
+    
+    def check_connection(self) -> bool:
+        """Backward-compatible connectivity check (boolean)."""
+        try:
+            if not self.sync_client:
+                self.connect_sync()
+            # Ping database
+            self.sync_client.admin.command('ping')
+            return True
+        except Exception:
+            return False
     
     def health_check(self) -> Dict[str, Any]:
         """Perform health check on database connection."""

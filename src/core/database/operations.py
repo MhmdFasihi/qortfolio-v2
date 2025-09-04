@@ -24,11 +24,9 @@ class DatabaseOperations:
     
     def __init__(self):
         self.connection = db_connection
-        # Provide sync DB handle for test compatibility
-        try:
-            self._db = self.connection.get_database()
-        except Exception:
-            self._db = None
+        # Defer establishing a sync connection to avoid noisy failures at import time.
+        # Tests and optional code paths already guard on None.
+        self._db = None
 
     @property
     def db(self):

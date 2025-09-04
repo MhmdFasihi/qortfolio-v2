@@ -5,7 +5,7 @@ alwaysApply: true
 
 ### Local development
 - Ensure Python 3.11 and `pip` are available.
-- Install dev deps: `pip install -r requirements-dev.txt`.
+- Install dev deps: `pip install -r requirements-dev.txt`. Conda is recommended for environment management.
 - Start Reflex UI: `reflex run` (serves at http://localhost:3000).
 - Environment vars (Mongo/Redis/API) can be provided via shell or `.env`.
 

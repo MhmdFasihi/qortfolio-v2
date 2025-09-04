@@ -20,7 +20,7 @@ for line in result.stdout.split('\n'):
 # Check MongoDB
 print("\n💾 MongoDB:")
 try:
-    client = MongoClient('mongodb://admin:password123@localhost:27017/qortfolio?authSource=admin', 
+    client = MongoClient('mongodb://admin:secure_password_123@localhost:27017/qortfolio?authSource=admin', 
                          serverSelectionTimeoutMS=2000)
     db = client.qortfolio
     

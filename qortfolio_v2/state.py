@@ -74,22 +74,28 @@ class OptionsState(rx.State):
             if not raw:
                 try:
                     from src.data.collectors.deribit_collector import DeribitCollector
-                    # Use mainnet for richer data when falling back
                     collector = DeribitCollector(testnet=False)
-                    df = await collector.get_options_chain(
-                        currency=self.selected_currency,
-                        strikes_around_atm=20,
-                    )
-                    raw = df.to_dict("records") if df is not None else []
+                    try:
+                        df = await collector.get_options_chain(
+                            currency=self.selected_currency,
+                            strikes_around_atm=6,
+                        )
+                        raw = df.to_dict("records") if df is not None else []
 
-                    # Attempt to persist the fetched data to MongoDB
-                    if raw:
+                        # Attempt to persist the fetched data to MongoDB
+                        if raw:
+                            try:
+                                await collector.store_data("options_data", raw)
+                                # Mark DB as connected if storage succeeded
+                                self.db_status = "Connected"
+                            except Exception:
+                                # Ignore storage failure; still render data
+                                pass
+                    finally:
+                        # Ensure we close aiohttp session / connectors
                         try:
-                            await collector.store_data("options_data", raw)
-                            # Mark DB as connected if storage succeeded
-                            self.db_status = "Connected"
-                        except Exception as _:
-                            # Ignore storage failure; still render data
+                            await collector.close()
+                        except Exception:
                             pass
                 except Exception:
                     raw = []

@@ -451,56 +451,113 @@ class DeribitCollector(BaseDataCollector):
             DataFrame with options chain
         """
         try:
-            # Fetch all options instruments
-            instruments = await self.collect(
-                currency=currency,
-                kind="option",
-                use_cache=True
-            )
-            
-            if not instruments:
+            # Fast path: avoid processing every instrument (too slow/heavy).
+            # 1) Fetch raw instruments only
+            raw = await self.fetch_data(currency=currency, kind="option", expired=False)
+            if not raw:
                 logger.warning(f"No options found for {currency}")
                 return pd.DataFrame()
-            
-            # Convert to DataFrame
-            df = pd.DataFrame(instruments)
-            
-            # Filter by expiry if specified
+
+            # 2) Parse instruments and group by expiry
+            parsed: List[DeribitInstrument] = []
+            for item in raw:
+                try:
+                    if item.get('kind') != 'option' or not item.get('is_active', True):
+                        continue
+                    parsed.append(DeribitInstrument.from_api_data(item))
+                except Exception:
+                    continue
+
+            if not parsed:
+                return pd.DataFrame()
+
+            # 3) Determine which expiries to include
+            expiries = sorted({inst.expiry for inst in parsed})
             if expiry:
-                df = df[df['expiry'] == expiry]
-            
+                selected_expiries = [expiry]
+            else:
+                # Limit to nearest few expiries to keep requests bounded
+                selected_expiries = expiries[:3]
+
+            # 4) Get spot price to pick strikes around ATM
+            spot_price = await self.get_index_price(currency)
+
+            # 5) Select subset of instruments around ATM for each expiry
+            selected: List[DeribitInstrument] = []
+            for exp in selected_expiries:
+                exp_instruments = [i for i in parsed if i.expiry == exp]
+                if not exp_instruments:
+                    continue
+                strikes = sorted({i.strike for i in exp_instruments})
+                if not strikes:
+                    continue
+                atm_strike = min(strikes, key=lambda x: abs(x - spot_price))
+                idx = strikes.index(atm_strike)
+                a = max(0, idx - max(1, strikes_around_atm))
+                b = min(len(strikes), idx + max(1, strikes_around_atm) + 1)
+                target_strikes = set(strikes[a:b])
+                selected.extend([i for i in exp_instruments if i.strike in target_strikes])
+
+            # Safety cap to avoid too many network calls
+            MAX_INSTRUMENTS = 200
+            if len(selected) > MAX_INSTRUMENTS:
+                selected = selected[:MAX_INSTRUMENTS]
+
+            # 6) Fetch ticker for selected instruments only
+            rows: List[Dict] = []
+            for inst in selected:
+                try:
+                    t = await self.get_ticker(inst.instrument_name)
+                    rows.append({
+                        'symbol': inst.instrument_name,
+                        'underlying': inst.underlying,
+                        'strike': inst.strike,
+                        'expiry': inst.expiry,
+                        'option_type': inst.option_type,
+                        'time_to_maturity': TimeUtils.calculate_time_to_maturity(datetime.utcnow(), inst.expiry),
+                        'bid': t.get('best_bid_price', 0),
+                        'ask': t.get('best_ask_price', 0),
+                        'last_price': t.get('last_price', 0),
+                        'mark_price': t.get('mark_price', 0),
+                        'volume': t.get('stats', {}).get('volume', 0),
+                        'volume_usd': t.get('stats', {}).get('volume_usd', 0),
+                        'open_interest': t.get('open_interest', 0),
+                        'mark_iv': t.get('mark_iv', 0),
+                        'bid_iv': t.get('bid_iv', 0),
+                        'ask_iv': t.get('ask_iv', 0),
+                        'delta': t.get('greeks', {}).get('delta'),
+                        'gamma': t.get('greeks', {}).get('gamma'),
+                        'theta': t.get('greeks', {}).get('theta'),
+                        'vega': t.get('greeks', {}).get('vega'),
+                        'rho': t.get('greeks', {}).get('rho'),
+                        'timestamp': datetime.utcnow(),
+                        'source': 'deribit',
+                        'testnet': self.testnet,
+                        'underlying_price': t.get('underlying_price', 0),
+                    })
+                except Exception:
+                    continue
+
+            if not rows:
+                return pd.DataFrame()
+
+            df = pd.DataFrame(rows)
+
             # Filter by minimum volume
             if min_volume > 0:
                 df = df[df['volume'] >= min_volume]
-            
-            # Get current spot price
-            spot_price = await self.get_index_price(currency)
-            
-            # Filter strikes around ATM if specified
-            if strikes_around_atm > 0:
-                unique_strikes = sorted(df['strike'].unique())
-                atm_strike = min(unique_strikes, key=lambda x: abs(x - spot_price))
-                atm_index = unique_strikes.index(atm_strike)
-                
-                start_idx = max(0, atm_index - strikes_around_atm)
-                end_idx = min(len(unique_strikes), atm_index + strikes_around_atm + 1)
-                selected_strikes = unique_strikes[start_idx:end_idx]
-                
-                df = df[df['strike'].isin(selected_strikes)]
-            
-            # Sort by expiry and strike
+
+            # Sort and add moneyness flags
             df = df.sort_values(['expiry', 'strike', 'option_type'])
-            
-            # Add moneyness
-            df['moneyness'] = df['strike'] / spot_price
+            df['moneyness'] = df['strike'] / max(spot_price, 1e-9)
             df['is_itm'] = df.apply(
-                lambda row: (spot_price > row['strike']) if row['option_type'] == 'call' 
+                lambda row: (spot_price > row['strike']) if row['option_type'] == 'call'
                 else (spot_price < row['strike']),
                 axis=1
             )
-            
+
             return df
-            
+
         except Exception as e:
             logger.error(f"Failed to get options chain: {e}")
             raise
