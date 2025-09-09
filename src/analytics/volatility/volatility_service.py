@@ -309,10 +309,6 @@ class VolatilityService:
         except Exception as e:
             logger.error(f"Error getting RV history: {e}")
             return []
-            
-        except Exception as e:
-            logger.error(f"Error getting IV history: {e}")
-            return []
     
     def _get_default_metrics(self) -> Dict:
         """Default metrics when no data available"""
