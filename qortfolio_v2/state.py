@@ -1,81 +1,177 @@
-"""State Management with Computed Properties"""
+"""Enhanced State Management with MongoDB + Deribit fallback"""
 
 import reflex as rx
 from typing import Dict, List
 from datetime import datetime
 
+
 class OptionsState(rx.State):
-    """Options page state with sample data"""
-    
+    """Options page state"""
+
     # UI State
     selected_currency: str = "BTC"
     loading: bool = False
-    db_status: str = "Not Connected"
-    
-    # Data - Initialize with defaults
+    db_status: str = "Checking..."
+
+    # Data
     options_data: List[Dict] = []
+    calls_data: List[Dict] = []
+    puts_data: List[Dict] = []
     total_contracts: int = 0
     avg_iv: float = 0.0
     max_oi: int = 0
-    total_volume: int = 0
     last_update: str = "Never"
-    
+
+    # Expiry filter
+    expiry_options: List[str] = []
+    selected_expiry: str = ""
+
     @rx.var
-    def avg_iv_display(self) -> str:
-        """Format IV as percentage string"""
-        return f"{self.avg_iv * 100:.1f}%"
-    
+    def avg_iv_pct(self) -> str:
+        """Formatted average IV as percentage"""
+        return f"{self.avg_iv:.2%}"
+
     def set_currency(self, currency: str):
-        """Set selected currency"""
+        """Set selected currency and fetch data"""
         self.selected_currency = currency
-        return self.fetch_options_data
-    
-    def fetch_options_data(self):
-        """Load sample options data"""
+        # Return an event spec to avoid Reflex wrapping a bound method/partial.
+        return OptionsState.fetch_options_data()
+
+    def set_expiry(self, expiry: str):
+        """Set selected expiry and refresh data"""
+        self.selected_expiry = expiry
+        return OptionsState.fetch_options_data()
+
+    async def fetch_options_data(self):
+        """Fetch options data with expiry filtering and robust fallbacks."""
         self.loading = True
-        
-        # Sample data for testing
-        self.options_data = [
-            {
-                "strike": 45000,
-                "option_type": "CALL",
-                "expiry": "2024-09-27",
-                "bid": "0.0234",
-                "ask": "0.0245",
-                "iv": "65.3%",
-                "volume": 125,
-                "open_interest": 890,
-            },
-            {
-                "strike": 46000,
-                "option_type": "PUT",
-                "expiry": "2024-09-27", 
-                "bid": "0.0156",
-                "ask": "0.0162",
-                "iv": "62.1%",
-                "volume": 89,
-                "open_interest": 567,
-            },
-            {
-                "strike": 47000,
-                "option_type": "CALL",
-                "expiry": "2024-10-25",
-                "bid": "0.0345",
-                "ask": "0.0356",
-                "iv": "68.7%",
-                "volume": 234,
-                "open_interest": 1245,
-            }
-        ]
-        
-        # Update metrics
-        self.total_contracts = len(self.options_data)
-        self.avg_iv = 0.652  # Store as decimal
-        self.max_oi = 1245
-        self.total_volume = 448
-        self.last_update = datetime.now().strftime("%H:%M:%S")
-        self.db_status = "Sample Data"
-        self.loading = False
+
+        def to_date_str(v) -> str:
+            try:
+                return str(v)[:10]
+            except Exception:
+                return ""
+
+        try:
+            from src.core.database.connection import db_connection
+            from src.core.database.operations import db_ops
+
+            # Try to connect asynchronously
+            try:
+                await db_connection.connect_async()
+                self.db_status = "Connected"
+            except Exception:
+                self.db_status = "Disconnected"
+
+            raw: List[Dict] = []
+            if self.db_status == "Connected":
+                # Pull more rows; we'll filter by expiry client-side
+                raw = await db_ops.get_latest_options(
+                    underlying=self.selected_currency,
+                    limit=1000,
+                )
+
+            # Fallback to live Deribit data if DB empty
+            if not raw:
+                try:
+                    from src.data.collectors.deribit_collector import DeribitCollector
+                    collector = DeribitCollector(testnet=False)
+                    try:
+                        df = await collector.get_options_chain(
+                            currency=self.selected_currency,
+                            strikes_around_atm=6,
+                        )
+                        raw = df.to_dict("records") if df is not None else []
+
+                        # Attempt to persist the fetched data to MongoDB
+                        if raw:
+                            try:
+                                await collector.store_data("options_data", raw)
+                                # Mark DB as connected if storage succeeded
+                                self.db_status = "Connected"
+                            except Exception:
+                                # Ignore storage failure; still render data
+                                pass
+                    finally:
+                        # Ensure we close aiohttp session / connectors
+                        try:
+                            await collector.close()
+                        except Exception:
+                            pass
+                except Exception:
+                    raw = []
+
+            # Expiry choices
+            expiries = sorted({to_date_str(item.get("expiry")) for item in raw if item.get("expiry")})
+            self.expiry_options = expiries
+            if not self.selected_expiry or self.selected_expiry not in expiries:
+                self.selected_expiry = expiries[0] if expiries else ""
+
+            # Filter by selected expiry
+            filtered = [
+                item for item in raw
+                if (self.selected_expiry == "" or to_date_str(item.get("expiry")) == self.selected_expiry)
+            ]
+
+            # Normalize fields and split calls/puts
+            def to_decimal_iv(x) -> float:
+                try:
+                    iv = x if x is not None else 0.0
+                    iv = float(iv)
+                    return iv / 100.0 if iv > 1 else iv
+                except Exception:
+                    return 0.0
+
+            def norm_row(opt: Dict) -> Dict:
+                bid = float(opt.get("bid", 0) or 0)
+                ask = float(opt.get("ask", 0) or 0)
+                iv = opt.get("mark_iv")
+                if iv is None:
+                    iv = opt.get("implied_volatility")
+                ivd = to_decimal_iv(iv or 0)
+                return {
+                    "strike": float(opt.get("strike", 0) or 0),
+                    "option_type": str(opt.get("option_type", "")).upper(),
+                    "expiry": to_date_str(opt.get("expiry")),
+                    "bid": f"{bid:.4f}",
+                    "ask": f"{ask:.4f}",
+                    "iv": f"{ivd:.2%}",
+                    "volume": int(opt.get("volume", 0) or 0),
+                    "open_interest": int(opt.get("open_interest", 0) or 0),
+                }
+
+            normalized = [norm_row(opt) for opt in filtered]
+            self.calls_data = [r for r in normalized if r["option_type"] == "CALL"]
+            self.puts_data = [r for r in normalized if r["option_type"] == "PUT"]
+            self.options_data = normalized
+
+            # Metrics based on filtered set
+            self.total_contracts = len(normalized)
+            ivs = []
+            for item in filtered:
+                if isinstance(item, dict):
+                    val = item.get("mark_iv")
+                    if val is None:
+                        val = item.get("implied_volatility")
+                    if val is not None:
+                        ivs.append(to_decimal_iv(val))
+            self.avg_iv = (sum(ivs) / len(ivs)) if ivs else 0.0
+            ois = [int(item.get("open_interest", 0) or 0) for item in filtered if isinstance(item, dict)]
+            self.max_oi = max(ois) if ois else 0
+
+        except Exception as e:
+            print(f"Error fetching data: {e}")
+            self.db_status = f"Error: {str(e)[:30]}"
+            self.options_data = []
+            self.calls_data = []
+            self.puts_data = []
+            self.total_contracts = 0
+            self.avg_iv = 0.0
+            self.max_oi = 0
+        finally:
+            self.loading = False
+            self.last_update = datetime.now().strftime("%H:%M:%S")
+
 
 class State(rx.State):
     """Main app state"""
