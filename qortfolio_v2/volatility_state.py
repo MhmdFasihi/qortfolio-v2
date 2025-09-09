@@ -3,9 +3,6 @@
 import reflex as rx
 from typing import Dict, List
 from datetime import datetime
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 class VolatilityState(rx.State):
     """Volatility analysis state with MongoDB data"""
@@ -50,12 +47,13 @@ class VolatilityState(rx.State):
     def set_currency(self, currency: str):
         """Set currency and fetch data"""
         self.selected_currency = currency
-        yield from self.fetch_volatility_data()
+        # Return an event spec to trigger async fetch (no yield from)
+        return VolatilityState.fetch_volatility_data()
     
     def set_period(self, period: str):
         """Set period and fetch data"""
         self.selected_period = period
-        yield from self.fetch_volatility_data()
+        return VolatilityState.fetch_volatility_data()
     
     async def fetch_volatility_data(self):
         """Fetch real volatility data from MongoDB"""
@@ -111,7 +109,6 @@ class VolatilityState(rx.State):
             
         finally:
             self.loading = False
-            yield
     
     def _load_sample_data(self):
         """Load sample data as fallback"""

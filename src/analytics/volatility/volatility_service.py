@@ -18,32 +18,44 @@ class VolatilityService:
     async def get_volatility_metrics(self, currency: str = "BTC") -> Dict:
         """Calculate volatility metrics from options data"""
         try:
-            # Get options collection
-            options_col = self.db.get_collection('options_data')
-            price_col = self.db.get_collection('price_data')
-            
-            if not options_col:
-                return self._get_default_metrics()
-            
-            # Fetch options data
-            options_cursor = options_col.find(
-                {"underlying_currency": currency}
-            ).sort("timestamp", -1).limit(500)
-            
-            options_data = list(options_cursor)
+            db = await self.db.get_database_async()
+            options_col = db.options_data
+            price_col = db.price_data
+
+            # Fetch recent options data for the underlying
+            cursor = options_col.find({"underlying": currency}).sort("timestamp", -1).limit(1000)
+            options_data = await cursor.to_list(length=1000)
             
             if not options_data:
                 return self._get_default_metrics()
             
             # Calculate average IV (ATM options)
+            iv_values = []
             atm_ivs = []
             for opt in options_data:
-                if opt.get('moneyness') and 0.95 < opt.get('moneyness', 0) < 1.05:
-                    iv = opt.get('implied_volatility', 0)
-                    if iv > 0:
+                iv = opt.get('mark_iv')
+                if iv is None:
+                    iv = opt.get('implied_volatility')
+                try:
+                    iv = float(iv)
+                    if iv > 1:
+                        iv = iv / 100.0
+                except Exception:
+                    iv = None
+                if iv is not None:
+                    iv_values.append(iv)
+                    m = opt.get('moneyness')
+                    if m is None:
+                        try:
+                            strike = float(opt.get('strike', 0))
+                            spot = float(opt.get('underlying_price', 0) or 0)
+                            m = strike / spot if spot > 0 else None
+                        except Exception:
+                            m = None
+                    if m is not None and 0.95 < m < 1.05:
                         atm_ivs.append(iv)
-            
-            current_iv = np.mean(atm_ivs) if atm_ivs else 0.65
+
+            current_iv = float(np.mean(atm_ivs)) if atm_ivs else (float(np.mean(iv_values)) if iv_values else 0.65)
             
             # Calculate realized volatility from price data
             current_rv = await self._calculate_realized_vol(currency, price_col)
@@ -65,29 +77,26 @@ class VolatilityService:
     async def _calculate_realized_vol(self, currency: str, price_col, days: int = 30) -> float:
         """Calculate realized volatility from price data"""
         try:
-            if not price_col:
-                return 0.58
-            
             # Get historical prices
-            end_date = datetime.now()
+            end_date = datetime.utcnow()
             start_date = end_date - timedelta(days=days)
-            
-            prices = list(price_col.find(
-                {
-                    "symbol": f"{currency}-USD",
-                    "timestamp": {"$gte": start_date, "$lte": end_date}
-                }
-            ).sort("timestamp", 1))
-            
+
+            cursor = price_col.find({
+                "symbol": currency,
+                "timestamp": {"$gte": start_date, "$lte": end_date}
+            }).sort("timestamp", 1)
+            prices = await cursor.to_list(length=None)
+
             if len(prices) < 2:
                 return 0.58
-            
-            # Calculate returns
-            price_values = [p['price'] for p in prices]
-            returns = np.diff(np.log(price_values))
-            
-            # Annualized volatility
-            rv = np.std(returns) * np.sqrt(365)
+
+            closes = [float(p.get('close', 0)) for p in prices]
+            closes = [c for c in closes if c > 0]
+            if len(closes) < 2:
+                return 0.58
+
+            returns = np.diff(np.log(closes))
+            rv = float(np.std(returns) * np.sqrt(365))
             return rv
             
         except Exception as e:
@@ -98,33 +107,24 @@ class VolatilityService:
         """Calculate IV rank and percentile"""
         try:
             # Get 1 year of IV history
-            one_year_ago = datetime.now() - timedelta(days=365)
-            
-            iv_history = list(options_col.aggregate([
-                {
-                    "$match": {
-                        "underlying_currency": currency,
-                        "timestamp": {"$gte": one_year_ago}
-                    }
-                },
-                {
-                    "$group": {
-                        "_id": {
-                            "$dateToString": {
-                                "format": "%Y-%m-%d",
-                                "date": "$timestamp"
-                            }
-                        },
-                        "avg_iv": {"$avg": "$implied_volatility"}
-                    }
-                },
-                {"$sort": {"avg_iv": 1}}
-            ]))
+            one_year_ago = datetime.utcnow() - timedelta(days=365)
+
+            pipeline = [
+                {"$match": {"underlying": currency, "timestamp": {"$gte": one_year_ago}}},
+                {"$group": {
+                    "_id": {"$dateToString": {"format": "%Y-%m-%d", "date": "$timestamp"}},
+                    "avg_iv": {"$avg": {"$ifNull": ["$mark_iv", "$implied_volatility"]}}
+                }},
+                {"$sort": {"_id": 1}}
+            ]
+            iv_history = await options_col.aggregate(pipeline).to_list(length=None)
             
             if not iv_history:
                 return 50.0, 50.0
             
-            ivs = [h['avg_iv'] for h in iv_history]
+            ivs = [float(h.get('avg_iv', 0) or 0) for h in iv_history]
+            # Normalize if stored as percent.
+            ivs = [iv/100.0 if iv > 1 else iv for iv in ivs]
             current_iv = ivs[-1] if ivs else 0.65
             
             # IV Rank = (Current IV - Min IV) / (Max IV - Min IV) * 100
@@ -142,23 +142,21 @@ class VolatilityService:
     async def get_term_structure(self, currency: str = "BTC") -> List[Dict]:
         """Get volatility term structure"""
         try:
-            options_col = self.db.get_collection('options_data')
-            if not options_col:
-                return self._get_default_term_structure()
+            db = await self.db.get_database_async()
+            options_col = db.options_data
             
             # Get unique expiries
             pipeline = [
-                {"$match": {"underlying_currency": currency}},
+                {"$match": {"underlying": currency}},
                 {"$group": {
-                    "_id": "$expiration_date",
-                    "avg_iv": {"$avg": "$implied_volatility"},
+                    "_id": "$expiry",
+                    "avg_iv": {"$avg": {"$ifNull": ["$mark_iv", "$implied_volatility"]}},
                     "count": {"$sum": 1}
                 }},
                 {"$sort": {"_id": 1}},
-                {"$limit": 10}
+                {"$limit": 12}
             ]
-            
-            expiries = list(options_col.aggregate(pipeline))
+            expiries = await options_col.aggregate(pipeline).to_list(length=None)
             
             if not expiries:
                 return self._get_default_term_structure()
@@ -167,7 +165,13 @@ class VolatilityService:
             term_structure = []
             for exp in expiries:
                 exp_date = exp['_id']
-                days_to_exp = (exp_date - datetime.now()).days if isinstance(exp_date, datetime) else 30
+                # exp_date might be stored as datetime or string
+                if isinstance(exp_date, str):
+                    try:
+                        exp_date = datetime.fromisoformat(exp_date)
+                    except Exception:
+                        exp_date = datetime.utcnow() + timedelta(days=30)
+                days_to_exp = (exp_date - datetime.utcnow()).days
                 
                 if days_to_exp <= 7:
                     label = "1W"
@@ -180,7 +184,7 @@ class VolatilityService:
                 
                 term_structure.append({
                     "expiry": label,
-                    "iv": exp['avg_iv'],
+                    "iv": (exp.get('avg_iv')/100.0 if exp.get('avg_iv', 0) and exp.get('avg_iv') > 1 else exp.get('avg_iv', 0) or 0),
                     "days": days_to_exp
                 })
             
@@ -193,44 +197,32 @@ class VolatilityService:
     async def get_volatility_smile(self, currency: str = "BTC", expiry_days: int = 30) -> List[Dict]:
         """Get volatility smile for specific expiry"""
         try:
-            options_col = self.db.get_collection('options_data')
-            if not options_col:
-                return self._get_default_smile()
+            db = await self.db.get_database_async()
+            options_col = db.options_data
             
             # Find target expiry
             target_date = datetime.now() + timedelta(days=expiry_days)
             
             # Get options for that expiry
             pipeline = [
-                {
-                    "$match": {
-                        "underlying_currency": currency,
-                        "expiration_date": {
-                            "$gte": target_date - timedelta(days=5),
-                            "$lte": target_date + timedelta(days=5)
-                        }
-                    }
-                },
-                {
-                    "$group": {
-                        "_id": "$strike_price",
-                        "avg_iv": {"$avg": "$implied_volatility"}
-                    }
-                },
+                {"$match": {
+                    "underlying": currency,
+                    "expiry": {"$gte": target_date - timedelta(days=5), "$lte": target_date + timedelta(days=5)}
+                }},
+                {"$group": {
+                    "_id": "$strike",
+                    "avg_iv": {"$avg": {"$ifNull": ["$mark_iv", "$implied_volatility"]}}
+                }},
                 {"$sort": {"_id": 1}}
             ]
-            
-            strikes = list(options_col.aggregate(pipeline))
+            strikes = await options_col.aggregate(pipeline).to_list(length=None)
             
             if not strikes:
                 return self._get_default_smile()
             
             # Format for display
             smile = [
-                {
-                    "strike": s['_id'],
-                    "iv": s['avg_iv']
-                }
+                {"strike": s['_id'], "iv": (s.get('avg_iv')/100.0 if s.get('avg_iv', 0) and s.get('avg_iv') > 1 else s.get('avg_iv', 0) or 0)}
                 for s in strikes
             ]
             
@@ -243,37 +235,27 @@ class VolatilityService:
     async def get_iv_history(self, currency: str = "BTC", days: int = 30) -> List[Dict]:
         """Get historical IV data"""
         try:
-            options_col = self.db.get_collection('options_data')
-            if not options_col:
-                return []
-            
-            start_date = datetime.now() - timedelta(days=days)
-            
-            # Daily average IV
+            db = await self.db.get_database_async()
+            options_col = db.options_data
+
+            start_date = datetime.utcnow() - timedelta(days=days)
+
             pipeline = [
-                {
-                    "$match": {
-                        "underlying_currency": currency,
-                        "timestamp": {"$gte": start_date}
-                    }
-                },
-                {
-                    "$group": {
-                        "_id": {
-                            "$dateToString": {
-                                "format": "%Y-%m-%d",
-                                "date": "$timestamp"
-                            }
-                        },
-                        "value": {"$avg": "$implied_volatility"}
-                    }
-                },
+                {"$match": {"underlying": currency, "timestamp": {"$gte": start_date}}},
+                {"$group": {
+                    "_id": {"$dateToString": {"format": "%Y-%m-%d", "date": "$timestamp"}},
+                    "value": {"$avg": {"$ifNull": ["$mark_iv", "$implied_volatility"]}}
+                }},
                 {"$sort": {"_id": 1}}
             ]
-            
-            iv_history = list(options_col.aggregate(pipeline))
-            
-            return [{"date": h['_id'], "value": h['value']} for h in iv_history]
+            iv_history = await options_col.aggregate(pipeline).to_list(length=None)
+
+            out = []
+            for h in iv_history:
+                v = h.get('value', 0) or 0
+                v = v/100.0 if v > 1 else v
+                out.append({"date": h['_id'], "value": v})
+            return out
             
         except Exception as e:
             logger.error(f"Error getting IV history: {e}")
