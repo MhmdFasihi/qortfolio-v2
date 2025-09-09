@@ -256,6 +256,9 @@ class VolatilityService:
                 v = v/100.0 if v > 1 else v
                 out.append({"date": h['_id'], "value": v})
             return out
+        except Exception as e:
+            logger.error(f"Error getting IV history: {e}")
+            return []
 
     async def get_rv_history(self, currency: str = "BTC", days: int = 30, window: int = 30) -> List[Dict]:
         """Get realized volatility history using a rolling window on price returns.
