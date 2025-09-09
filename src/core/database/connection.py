@@ -1,19 +1,17 @@
 """MongoDB Database Connection Module"""
 
 import os
-from typing import Optional, Dict, Any
+from typing import Optional
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
 import logging
 from dotenv import load_dotenv
 
-# Load environment variables
 load_dotenv()
-
 logger = logging.getLogger(__name__)
 
 class DatabaseConnection:
-    """MongoDB connection handler with singleton pattern"""
+    """MongoDB connection handler"""
     
     _instance = None
     _client = None
@@ -24,40 +22,44 @@ class DatabaseConnection:
         return cls._instance
     
     def __init__(self):
-        """Initialize database connection"""
         if self._client is None:
             self.connect()
     
     def connect(self) -> Optional[MongoClient]:
         """Establish MongoDB connection"""
         try:
-            # Get connection string from environment or use default
-            mongo_uri = os.getenv('MONGODB_URI', 'mongodb://localhost:27017/')
+            # Check for authentication credentials
+            mongo_user = os.getenv('MONGO_USER', '')
+            mongo_pass = os.getenv('MONGO_PASSWORD', '')
+            mongo_host = os.getenv('MONGO_HOST', 'localhost')
+            mongo_port = os.getenv('MONGO_PORT', '27017')
             
-            # Create client with timeout
+            # Build connection string
+            if mongo_user and mongo_pass:
+                mongo_uri = f"mongodb://{mongo_user}:{mongo_pass}@{mongo_host}:{mongo_port}/"
+            else:
+                mongo_uri = f"mongodb://{mongo_host}:{mongo_port}/"
+            
+            # Create client
             self._client = MongoClient(
                 mongo_uri,
                 serverSelectionTimeoutMS=5000,
-                connectTimeoutMS=5000
+                connectTimeoutMS=5000,
+                directConnection=True
             )
             
-            # Test connection
+            # Test connection with simple ping
             self._client.admin.command('ping')
             logger.info("MongoDB connection established")
             return self._client
             
-        except (ConnectionFailure, ServerSelectionTimeoutError) as e:
-            logger.error(f"MongoDB connection failed: {e}")
-            self._client = None
-            return None
         except Exception as e:
-            logger.error(f"Unexpected error connecting to MongoDB: {e}")
+            logger.error(f"MongoDB connection failed: {e}")
             self._client = None
             return None
     
     @property
     def client(self) -> Optional[MongoClient]:
-        """Get MongoDB client"""
         if self._client is None:
             self.connect()
         return self._client
@@ -76,7 +78,7 @@ class DatabaseConnection:
                 self.client.admin.command('ping')
                 return True
         except:
-            pass
+            self._client = None
         return False
     
     def get_collection(self, collection_name: str):
@@ -85,5 +87,4 @@ class DatabaseConnection:
             return self.db[collection_name]
         return None
 
-# Create singleton instance
 db_connection = DatabaseConnection()
