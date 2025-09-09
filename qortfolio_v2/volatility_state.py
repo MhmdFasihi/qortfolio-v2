@@ -86,6 +86,14 @@ class VolatilityState(rx.State):
                 
                 # Fetch term structure
                 self.term_structure = await volatility_service.get_term_structure(self.selected_currency)
+                # Add percentage convenience field for charting
+                try:
+                    self.term_structure = [
+                        {**row, "iv_pct": round(float(row.get("iv", 0) or 0) * 100.0, 2)}
+                        for row in self.term_structure
+                    ]
+                except Exception:
+                    pass
                 
                 # Fetch volatility smile
                 self.volatility_smile = await volatility_service.get_volatility_smile(self.selected_currency)
@@ -103,10 +111,18 @@ class VolatilityState(rx.State):
                 iv_map = {d["date"]: d["value"] for d in self.iv_data}
                 rv_map = {d["date"]: d["value"] for d in self.rv_data}
                 all_dates = sorted(set(iv_map.keys()) | set(rv_map.keys()))
-                self.iv_rv_data = [
-                    {"date": dt, "iv": iv_map.get(dt, None), "rv": rv_map.get(dt, None)}
-                    for dt in all_dates
-                ]
+                self.iv_rv_data = []
+                for dt in all_dates:
+                    ivv = iv_map.get(dt, None)
+                    rvv = rv_map.get(dt, None)
+                    entry = {"date": dt, "iv": ivv, "rv": rvv}
+                    try:
+                        entry["iv_pct"] = round(ivv * 100.0, 2) if ivv is not None else None
+                        entry["rv_pct"] = round(rvv * 100.0, 2) if rvv is not None else None
+                    except Exception:
+                        entry["iv_pct"] = None
+                        entry["rv_pct"] = None
+                    self.iv_rv_data.append(entry)
                 
             else:
                 self.db_status = "Using Sample Data"
@@ -157,7 +173,23 @@ class VolatilityState(rx.State):
             {"date": d["date"], "value": d["value"] * 0.9}
             for d in self.iv_data
         ]
-        self.iv_rv_data = [
-            {"date": d["date"], "iv": d["value"], "rv": d["value"] * 0.9}
-            for d in self.iv_data
-        ]
+        self.iv_rv_data = []
+        for d in self.iv_data:
+            ivv = d["value"]
+            rvv = d["value"] * 0.9
+            self.iv_rv_data.append({
+                "date": d["date"],
+                "iv": ivv,
+                "rv": rvv,
+                "iv_pct": round(ivv * 100.0, 2),
+                "rv_pct": round(rvv * 100.0, 2),
+            })
+
+        # Add iv_pct to term structure sample
+        try:
+            self.term_structure = [
+                {**row, "iv_pct": round(float(row.get("iv", 0) or 0) * 100.0, 2)}
+                for row in self.term_structure
+            ]
+        except Exception:
+            pass
