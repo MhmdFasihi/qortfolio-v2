@@ -3,11 +3,33 @@
 
 """Configuration package for Qortfolio V2.
 
-This package exposes crypto sector configuration and re-exports the main
-`config` object from `src.core.settings` to avoid name conflicts.
+Provides lazy access to the global `config` to avoid circular imports during
+module initialization and exposes crypto sector utilities.
 """
 
-from ..settings import config  # re-export config instance
 from ..crypto.crypto_sectors import crypto_sectors, CryptoSectorsManager
+
+
+class _ConfigProxy:
+    """Lazy proxy for src.core.settings.config.
+
+    This defers importing `src.core.settings` until the proxy is used,
+    preventing circular import issues when modules import `src.core.config`.
+    """
+
+    def __getattr__(self, name):
+        from ..settings import config as _real_config
+        return getattr(_real_config, name)
+
+    def __repr__(self) -> str:
+        try:
+            from ..settings import config as _real_config
+            return f"ConfigProxy({repr(_real_config)})"
+        except Exception:
+            return "ConfigProxy(<uninitialized>)"
+
+
+# Re-export a proxy named `config` for compatibility
+config = _ConfigProxy()
 
 __all__ = ['config', 'crypto_sectors', 'CryptoSectorsManager']
