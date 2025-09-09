@@ -1,22 +1,18 @@
-"""State Management with MongoDB Integration"""
+"""State Management with Computed Properties"""
 
 import reflex as rx
 from typing import Dict, List
 from datetime import datetime
-import asyncio
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 class OptionsState(rx.State):
-    """Options page state with MongoDB integration"""
+    """Options page state with sample data"""
     
     # UI State
     selected_currency: str = "BTC"
     loading: bool = False
-    db_status: str = "Checking..."
+    db_status: str = "Not Connected"
     
-    # Data
+    # Data - Initialize with defaults
     options_data: List[Dict] = []
     total_contracts: int = 0
     avg_iv: float = 0.0
@@ -24,82 +20,62 @@ class OptionsState(rx.State):
     total_volume: int = 0
     last_update: str = "Never"
     
-    async def check_db_connection(self):
-        """Check MongoDB connection status"""
-        try:
-            from src.core.database.connection import db_connection
-            if db_connection.check_connection():
-                self.db_status = "Connected"
-                return True
-            else:
-                self.db_status = "Disconnected"
-                return False
-        except Exception as e:
-            self.db_status = f"Error: {str(e)[:20]}"
-            return False
+    @rx.var
+    def avg_iv_display(self) -> str:
+        """Format IV as percentage string"""
+        return f"{self.avg_iv * 100:.1f}%"
     
     def set_currency(self, currency: str):
-        """Set selected currency and fetch data"""
+        """Set selected currency"""
         self.selected_currency = currency
         return self.fetch_options_data
     
-    async def fetch_options_data(self):
-        """Fetch options data from MongoDB"""
+    def fetch_options_data(self):
+        """Load sample options data"""
         self.loading = True
         
-        try:
-            # Check DB connection first
-            db_connected = await self.check_db_connection()
-            
-            # Import service
-            from src.data.services.options_service import options_service
-            
-            # Fetch data
-            self.options_data = await options_service.get_options_by_currency(
-                self.selected_currency
-            )
-            
-            # Get metrics
-            metrics = await options_service.get_metrics(self.selected_currency)
-            self.total_contracts = metrics['total_contracts']
-            self.avg_iv = metrics['avg_iv']
-            self.max_oi = metrics['max_oi']
-            self.total_volume = metrics['total_volume']
-            
-            # Update status
-            if db_connected:
-                self.db_status = "Connected"
-            else:
-                self.db_status = "Using Sample Data"
-                
-        except Exception as e:
-            print(f"Error in fetch_options_data: {e}")
-            # Use fallback sample data
-            self.options_data = [
-                {
-                    "strike": 45000,
-                    "option_type": "CALL",
-                    "expiry": "2024-09-27",
-                    "bid": "0.0234",
-                    "ask": "0.0245",
-                    "iv": "65.3%",
-                    "volume": 125,
-                    "open_interest": 890,
-                    "delta": "0.523",
-                    "gamma": "0.0012",
-                    "theta": "-0.0234",
-                    "vega": "0.1234",
-                }
-            ]
-            self.total_contracts = 1
-            self.avg_iv = 0.653
-            self.max_oi = 890
-            self.total_volume = 125
-            self.db_status = "Error - Using Fallback"
-            
-        finally:
-            self.loading = False
-            self.last_update = datetime.now().strftime("%H:%M:%S")
+        # Sample data for testing
+        self.options_data = [
+            {
+                "strike": 45000,
+                "option_type": "CALL",
+                "expiry": "2024-09-27",
+                "bid": "0.0234",
+                "ask": "0.0245",
+                "iv": "65.3%",
+                "volume": 125,
+                "open_interest": 890,
+            },
+            {
+                "strike": 46000,
+                "option_type": "PUT",
+                "expiry": "2024-09-27", 
+                "bid": "0.0156",
+                "ask": "0.0162",
+                "iv": "62.1%",
+                "volume": 89,
+                "open_interest": 567,
+            },
+            {
+                "strike": 47000,
+                "option_type": "CALL",
+                "expiry": "2024-10-25",
+                "bid": "0.0345",
+                "ask": "0.0356",
+                "iv": "68.7%",
+                "volume": 234,
+                "open_interest": 1245,
+            }
+        ]
+        
+        # Update metrics
+        self.total_contracts = len(self.options_data)
+        self.avg_iv = 0.652  # Store as decimal
+        self.max_oi = 1245
+        self.total_volume = 448
+        self.last_update = datetime.now().strftime("%H:%M:%S")
+        self.db_status = "Sample Data"
+        self.loading = False
 
 class State(rx.State):
     """Main app state"""
