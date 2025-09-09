@@ -7,7 +7,7 @@ Provides lazy access to the global `config` to avoid circular imports during
 module initialization and exposes crypto sector utilities.
 """
 
-from ..crypto.crypto_sectors import crypto_sectors, CryptoSectorsManager
+# Note: Do not import crypto sector modules here to avoid circular imports
 
 
 class _ConfigProxy:
@@ -32,4 +32,4 @@ class _ConfigProxy:
 # Re-export a proxy named `config` for compatibility
 config = _ConfigProxy()
 
-__all__ = ['config', 'crypto_sectors', 'CryptoSectorsManager']
+__all__ = ['config']

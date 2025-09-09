@@ -118,9 +118,9 @@ class Config:
         self.api = self._load_api_config()
         self.app_settings = self._load_app_settings()
         
-        # Load crypto sectors configuration
+        # Load crypto sectors configuration (import directly from module to avoid cycles)
         try:
-            from src.core.crypto.crypto_sectors import crypto_sectors
+            from src.core.config.crypto_sectors import crypto_sectors
             self.crypto_sectors = crypto_sectors
             logger.info("✅ Crypto sectors configuration loaded")
         except ImportError as e:
