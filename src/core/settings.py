@@ -32,6 +32,14 @@ class DatabaseConfig:
     database: str
     auth_source: str
     uri: Optional[str] = None
+    # Pooling / timeouts
+    max_pool_size: int = 50
+    min_pool_size: int = 10
+    server_selection_timeout_ms: int = 5000
+    connect_timeout_ms: int = 10000
+    socket_timeout_ms: int = 10000
+    wait_queue_timeout_ms: int = 5000
+    heartbeat_frequency_ms: int = 10000
     
     @property
     def connection_string(self) -> str:
@@ -129,7 +137,14 @@ class Config:
             password=os.getenv("MONGO_PASSWORD", "secure_password_123"),
             database=os.getenv("MONGO_DATABASE", "qortfolio"),
             auth_source=os.getenv("MONGO_AUTH_SOURCE", "admin"),
-            uri=os.getenv("MONGODB_URL")
+            uri=os.getenv("MONGODB_URL"),
+            max_pool_size=int(os.getenv("MONGO_MAX_POOL_SIZE", 50)),
+            min_pool_size=int(os.getenv("MONGO_MIN_POOL_SIZE", 10)),
+            server_selection_timeout_ms=int(os.getenv("MONGO_SERVER_SELECTION_TIMEOUT_MS", 5000)),
+            connect_timeout_ms=int(os.getenv("MONGO_CONNECT_TIMEOUT_MS", 10000)),
+            socket_timeout_ms=int(os.getenv("MONGO_SOCKET_TIMEOUT_MS", 10000)),
+            wait_queue_timeout_ms=int(os.getenv("MONGO_WAIT_QUEUE_TIMEOUT_MS", 5000)),
+            heartbeat_frequency_ms=int(os.getenv("MONGO_HEARTBEAT_FREQUENCY_MS", 10000)),
         )
     
     def _load_redis_config(self) -> RedisConfig:
