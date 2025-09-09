@@ -2,7 +2,9 @@
 
 import reflex as rx
 from .pages.options_analytics import options_analytics_page
+from .pages.volatility import volatility_page
 from .state import State, OptionsState
+from .volatility_state import VolatilityState
 
 def index() -> rx.Component:
     """Main dashboard page"""
@@ -10,9 +12,16 @@ def index() -> rx.Component:
         rx.vstack(
             rx.heading("Qortfolio V2 Dashboard", size="8", color="#a855f7"),
             rx.text("Professional Quantitative Finance Platform", size="4", color="#9ca3af"),
-            rx.link(
-                rx.button("Go to Options Analytics", color_scheme="purple", size="3"),
-                href="/options",
+            rx.hstack(
+                rx.link(
+                    rx.button("Options Analytics", color_scheme="purple", size="3"),
+                    href="/options",
+                ),
+                rx.link(
+                    rx.button("Volatility Analysis", color_scheme="purple", size="3"),
+                    href="/volatility",
+                ),
+                spacing="4",
             ),
             spacing="5",
         ),
@@ -32,9 +41,5 @@ app = rx.App(
 
 # Add pages
 app.add_page(index, route="/", title="Qortfolio V2")
-app.add_page(
-    options_analytics_page,
-    route="/options",
-    title="Options Analytics",
-    on_load=OptionsState.fetch_options_data,
-)
+app.add_page(options_analytics_page, route="/options", title="Options Analytics")
+app.add_page(volatility_page, route="/volatility", title="Volatility Analysis")
