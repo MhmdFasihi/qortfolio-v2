@@ -256,6 +256,59 @@ class VolatilityService:
                 v = v/100.0 if v > 1 else v
                 out.append({"date": h['_id'], "value": v})
             return out
+
+    async def get_rv_history(self, currency: str = "BTC", days: int = 30, window: int = 30) -> List[Dict]:
+        """Get realized volatility history using a rolling window on price returns.
+
+        Args:
+            currency: Symbol (e.g., BTC, ETH)
+            days: Total history length to return
+            window: Rolling window in days for RV calculation
+
+        Returns:
+            List of {date: YYYY-MM-DD, value: rv_decimal}
+        """
+        try:
+            db = await self.db.get_database_async()
+            price_col = db.price_data
+
+            end_date = datetime.utcnow()
+            start_date = end_date - timedelta(days=days + window)
+
+            cursor = price_col.find({
+                "symbol": currency,
+                "timestamp": {"$gte": start_date, "$lte": end_date}
+            }).sort("timestamp", 1)
+            prices = await cursor.to_list(length=None)
+
+            if len(prices) < window + 2:
+                return []
+
+            # Build daily close series
+            df = pd.DataFrame([
+                {"ts": p["timestamp"], "close": float(p.get("close", 0) or 0)}
+                for p in prices
+            ])
+            df = df[df["close"] > 0].copy()
+            if df.empty:
+                return []
+            # Resample to daily to ensure consistent spacing
+            df = df.set_index("ts").resample("1D").last().dropna()
+            if len(df) < window + 2:
+                return []
+
+            # Log returns and rolling std
+            returns = np.log(df["close"]).diff().dropna()
+            rv = returns.rolling(window).std() * np.sqrt(365)
+            rv = rv.dropna()
+
+            # Slice to last 'days'
+            rv = rv.iloc[-days:]
+            out = [{"date": idx.strftime("%Y-%m-%d"), "value": float(val)} for idx, val in rv.items()]
+            return out
+        except Exception as e:
+            logger.error(f"Error getting RV history: {e}")
+            return []
             
         except Exception as e:
             logger.error(f"Error getting IV history: {e}")

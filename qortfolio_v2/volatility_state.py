@@ -101,11 +101,11 @@ class VolatilityState(rx.State):
                 # Fetch IV history
                 self.iv_data = await volatility_service.get_iv_history(self.selected_currency, period_days)
                 
-                # Temporary RV approximation: 90% of IV (replace when RV history available)
-                self.rv_data = [
-                    {"date": d["date"], "value": d["value"] * 0.9}
-                    for d in self.iv_data
-                ]
+                # Fetch RV history with a sensible rolling window
+                rv_window = 7 if period_days <= 7 else 30
+                self.rv_data = await volatility_service.get_rv_history(
+                    self.selected_currency, days=period_days, window=rv_window
+                )
 
                 # Build combined IV vs RV series for charting
                 iv_map = {d["date"]: d["value"] for d in self.iv_data}
