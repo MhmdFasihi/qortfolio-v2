@@ -121,7 +121,8 @@ class DataManager:
         if enable_yfinance:
             self.collectors['yfinance'] = CryptoCollector()
         if enable_deribit:
-            self.collectors['deribit'] = DeribitCollector(testnet=True)
+            # Use mainnet in production, testnet otherwise
+            self.collectors['deribit'] = DeribitCollector(testnet=(not config.is_production()))
         
         # Task management
         self.tasks: List[CollectionTask] = []
