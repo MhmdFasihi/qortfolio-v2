@@ -112,31 +112,43 @@ def vol_metric_card(label: str, value: rx.Var, color: str) -> rx.Component:
     )
 
 def create_iv_rv_chart() -> rx.Component:
-    """Create IV vs RV comparison chart"""
+    """Create IV vs RV comparison chart (interactive, percent axis)."""
     return rx.recharts.line_chart(
+        rx.recharts.cartesian_grid(stroke_dasharray="3 3"),
         rx.recharts.line(
-            data_key="value",
+            data_key="iv",
             stroke="#a855f7",
             name="IV",
+            dot=False,
+        ),
+        rx.recharts.line(
+            data_key="rv",
+            stroke="#3b82f6",
+            name="RV",
+            dot=False,
         ),
         rx.recharts.x_axis(data_key="date"),
-        rx.recharts.y_axis(),
+        rx.recharts.y_axis(tick_formatter=lambda v: f"{round(v*100,1)}%"),
+        rx.recharts.tooltip(),
         rx.recharts.legend(),
-        data=VolatilityState.iv_data,
-        height=300,
+        data=VolatilityState.iv_rv_data,
+        height=320,
     )
 
 def create_term_structure_chart() -> rx.Component:
-    """Create term structure chart"""
+    """Create term structure chart (interactive, percent axis)."""
     return rx.recharts.bar_chart(
+        rx.recharts.cartesian_grid(stroke_dasharray="3 3"),
         rx.recharts.bar(
             data_key="iv",
             fill="#a855f7",
+            name="Avg IV",
         ),
         rx.recharts.x_axis(data_key="expiry"),
-        rx.recharts.y_axis(),
+        rx.recharts.y_axis(tick_formatter=lambda v: f"{round(v*100,1)}%"),
+        rx.recharts.tooltip(),
         data=VolatilityState.term_structure,
-        height=300,
+        height=320,
     )
 
 def create_volatility_smile_chart() -> rx.Component:

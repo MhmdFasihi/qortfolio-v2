@@ -14,6 +14,7 @@ class VolatilityState(rx.State):
     # Data
     iv_data: List[Dict] = []
     rv_data: List[Dict] = []  
+    iv_rv_data: List[Dict] = []
     term_structure: List[Dict] = []
     volatility_smile: List[Dict] = []
     
@@ -92,10 +93,19 @@ class VolatilityState(rx.State):
                 # Fetch IV history
                 self.iv_data = await volatility_service.get_iv_history(self.selected_currency, period_days)
                 
-                # For now, RV data same as IV (you can calculate separately)
+                # Temporary RV approximation: 90% of IV (replace when RV history available)
                 self.rv_data = [
-                    {"date": d["date"], "value": d["value"] * 0.9}  # Mock RV as 90% of IV
+                    {"date": d["date"], "value": d["value"] * 0.9}
                     for d in self.iv_data
+                ]
+
+                # Build combined IV vs RV series for charting
+                iv_map = {d["date"]: d["value"] for d in self.iv_data}
+                rv_map = {d["date"]: d["value"] for d in self.rv_data}
+                all_dates = sorted(set(iv_map.keys()) | set(rv_map.keys()))
+                self.iv_rv_data = [
+                    {"date": dt, "iv": iv_map.get(dt, None), "rv": rv_map.get(dt, None)}
+                    for dt in all_dates
                 ]
                 
             else:
@@ -135,3 +145,19 @@ class VolatilityState(rx.State):
         self.current_rv = 0.58
         self.iv_rank = 50.0
         self.iv_percentile = 50.0
+
+        # Sample IV/RV history
+        self.iv_data = [
+            {"date": "2024-09-01", "value": 0.60},
+            {"date": "2024-09-05", "value": 0.62},
+            {"date": "2024-09-10", "value": 0.64},
+            {"date": "2024-09-15", "value": 0.66},
+        ]
+        self.rv_data = [
+            {"date": d["date"], "value": d["value"] * 0.9}
+            for d in self.iv_data
+        ]
+        self.iv_rv_data = [
+            {"date": d["date"], "iv": d["value"], "rv": d["value"] * 0.9}
+            for d in self.iv_data
+        ]
