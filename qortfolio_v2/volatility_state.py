@@ -45,14 +45,16 @@ class VolatilityState(rx.State):
         return f"{premium:+.1f}%"
     
     def set_currency(self, currency: str):
+        """Set currency and fetch data"""
         self.selected_currency = currency
-        return self.fetch_volatility_data
+        yield from self.fetch_volatility_data()
     
     def set_period(self, period: str):
+        """Set period and fetch data"""
         self.selected_period = period
-        return self.fetch_volatility_data
+        yield from self.fetch_volatility_data()
     
-    async def fetch_volatility_data(self):
+    def fetch_volatility_data(self):
         """Fetch volatility data"""
         self.loading = True
         
@@ -95,3 +97,4 @@ class VolatilityState(rx.State):
         self.iv_percentile = 82.1
         
         self.loading = False
+        yield
