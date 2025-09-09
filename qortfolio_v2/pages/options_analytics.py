@@ -29,7 +29,7 @@ def options_analytics_page() -> rx.Component:
                 value=OptionsState.selected_currency,
                 on_change=OptionsState.set_currency,
             ),
-            rx.text(f"Status: ", color="#9ca3af"),
+            rx.text("Status: ", color="#9ca3af"),
             rx.text(OptionsState.db_status, color="#a855f7"),
             spacing="4",
             padding="1rem 2rem",
@@ -38,7 +38,7 @@ def options_analytics_page() -> rx.Component:
         # Metrics Cards
         rx.grid(
             metric_card("Total Contracts", OptionsState.total_contracts),
-            metric_card("Avg IV", OptionsState.avg_iv, is_percentage=True),
+            metric_card("Avg IV", OptionsState.avg_iv_display),
             metric_card("Max OI", OptionsState.max_oi),
             metric_card("Volume", OptionsState.total_volume),
             columns="4",
@@ -85,18 +85,12 @@ def options_analytics_page() -> rx.Component:
         },
     )
 
-def metric_card(label: str, value: rx.Var, is_percentage: bool = False) -> rx.Component:
+def metric_card(label: str, value: rx.Var) -> rx.Component:
     """Metric display card"""
-    display_value = rx.cond(
-        is_percentage,
-        rx.text(f"{value:.1%}", size="5", weight="bold"),
-        rx.text(value, size="5", weight="bold"),
-    )
-    
     return rx.card(
         rx.vstack(
             rx.text(label, size="2", color="#a855f7"),
-            display_value,
+            rx.text(value, size="5", weight="bold"),
             align="center",
         ),
         style={
