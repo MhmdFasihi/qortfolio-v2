@@ -216,7 +216,11 @@ def risk_alert(alert: Dict) -> rx.Component:
     
     return rx.hstack(
         rx.icon(
-            "alert-triangle" if alert["level"] == "warning" else "info",
+            rx.cond(
+                alert["level"] == "warning",
+                "alert-triangle",
+                "info"
+            ),
             size=16,
             color=f"var(--{color}-9)",
         ),
