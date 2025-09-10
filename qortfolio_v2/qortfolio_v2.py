@@ -4,9 +4,11 @@ import reflex as rx
 from .pages.options_analytics import options_analytics_page
 from .pages.volatility import volatility_page
 from .pages.portfolio import portfolio_page
+from .pages.risk import risk_page
 from .state import State, OptionsState
 from .volatility_state import VolatilityState
 from .portfolio_state import PortfolioState
+from .risk_state import RiskState
 
 def index() -> rx.Component:
     """Main dashboard page"""
@@ -27,7 +29,11 @@ def index() -> rx.Component:
                     rx.button("Portfolio Management", color_scheme="purple", size="3"),
                     href="/portfolio",
                 ),
-                columns="3",
+                rx.link(
+                    rx.button("Risk Dashboard", color_scheme="purple", size="3"),
+                    href="/risk",
+                ),
+                columns="2",
                 spacing="4",
             ),
             spacing="5",
@@ -51,3 +57,4 @@ app.add_page(index, route="/", title="Qortfolio V2")
 app.add_page(options_analytics_page, route="/options", title="Options Analytics")
 app.add_page(volatility_page, route="/volatility", title="Volatility Analysis")
 app.add_page(portfolio_page, route="/portfolio", title="Portfolio Management")
+app.add_page(risk_page, route="/risk", title="Risk Dashboard")
