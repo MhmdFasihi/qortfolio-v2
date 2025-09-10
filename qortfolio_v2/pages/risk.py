@@ -1,6 +1,7 @@
 """Risk Dashboard Page"""
 
 import reflex as rx
+from typing import Dict
 from ..risk_state import RiskState
 
 def risk_page() -> rx.Component:
