@@ -187,13 +187,15 @@ def risk_metric_card(label: str, value: str, color: str) -> rx.Component:
         }
     )
 
-def greek_card(name: str, value: float) -> rx.Component:
-    """Greek exposure card"""
-    color = "green" if value > 0 else "red"
+def greek_card(name: str, value) -> rx.Component:
+    """Greek exposure card (reactive-safe)."""
+    # Use rx.cond with a reactive comparison; avoid Python boolean on Var.
+    color_var = rx.cond(value > 0, "var(--green-9)", "var(--red-9)")
     return rx.box(
         rx.vstack(
             rx.text(name, size="2", color="#9ca3af"),
-            rx.text(f"{value:.4f}", size="4", weight="bold", color=f"var(--{color}-9)"),
+            # Display raw reactive value; formatting can be handled in state if desired.
+            rx.text(value, size="4", weight="bold", color=color_var),
             align="center",
         ),
         padding="1rem",
