@@ -2,11 +2,12 @@
 
 import reflex as rx
 from typing import Dict
+from ..components.navigation import page_layout
 from ..risk_state import RiskState
 
 def risk_page() -> rx.Component:
-    """Risk dashboard page"""
-    return rx.vstack(
+    """Risk dashboard page with sidebar"""
+    content = rx.vstack(
         # Header
         rx.hstack(
             rx.heading("Risk Dashboard", size="8", color="#a855f7"),
@@ -136,11 +137,9 @@ def risk_page() -> rx.Component:
         ),
         
         width="100%",
-        style={
-            "background": "linear-gradient(135deg, #1a0033 0%, #220044 50%, #1a0033 100%)",
-            "min_height": "100vh",
-        },
+        width="100%",
     )
+    return page_layout(content, "Risk Dashboard")
 
 def risk_score_banner() -> rx.Component:
     """Risk score display banner"""

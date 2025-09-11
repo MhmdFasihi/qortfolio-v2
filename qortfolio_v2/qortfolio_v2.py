@@ -125,5 +125,5 @@ app = rx.App(
 app.add_page(index, route="/", title="Qortfolio V2 Dashboard")
 app.add_page(options_analytics_page, route="/options", title="Options Analytics")
 app.add_page(volatility_page, route="/volatility", title="Volatility Analysis")
-app.add_page(portfolio_page, route="/portfolio", title="Portfolio Management")
+app.add_page(portfolio_page, route="/portfolio", title="Portfolio Management", on_load=PortfolioState.fetch_portfolio_data)
 app.add_page(risk_page, route="/risk", title="Risk Dashboard")

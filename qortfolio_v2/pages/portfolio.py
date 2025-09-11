@@ -2,10 +2,11 @@
 
 import reflex as rx
 from ..portfolio_state import PortfolioState
+from ..components.navigation import page_layout
 
 def portfolio_page() -> rx.Component:
-    """Portfolio management page"""
-    return rx.vstack(
+    """Portfolio management page with sidebar and charts"""
+    content = rx.vstack(
         # Header
         rx.hstack(
             rx.heading("Portfolio Management", size="8", color="#a855f7"),
@@ -33,7 +34,7 @@ def portfolio_page() -> rx.Component:
             padding="0 2rem",
         ),
         
-        # View Selector
+        # View Selector & Filters
         rx.hstack(
             rx.button(
                 "Positions",
@@ -65,6 +66,11 @@ def portfolio_page() -> rx.Component:
                     PortfolioState.selected_view == "performance", "solid", "outline"
                 ),
             ),
+            rx.spacer(),
+            rx.text("Assets:", size="3"),
+            rx.select(["all", "spot", "options"], value=PortfolioState.selected_asset_type, on_change=PortfolioState.set_asset_type),
+            rx.text("Timeframe:", size="3"),
+            rx.select(["7d", "30d", "90d", "1y"], value=PortfolioState.selected_period, on_change=PortfolioState.set_period),
             spacing="2",
             padding="1rem 2rem",
         ),
@@ -81,11 +87,8 @@ def portfolio_page() -> rx.Component:
         ),
         
         width="100%",
-        style={
-            "background": "linear-gradient(135deg, #1a0033 0%, #220044 50%, #1a0033 100%)",
-            "min_height": "100vh",
-        },
     )
+    return page_layout(content, "Portfolio Management")
 
 def portfolio_metric_card(label: str, value: rx.Var, color: str) -> rx.Component:
     """Portfolio metric card"""
@@ -175,24 +178,42 @@ def allocation_view() -> rx.Component:
 
 def performance_view() -> rx.Component:
     """Performance metrics view"""
-    return rx.card(
-        rx.vstack(
-            rx.heading("Performance Metrics", size="5"),
-            rx.grid(
-                perf_metric("Daily Return", f"{PortfolioState.daily_return:.2f}%"),
-                perf_metric("Sharpe Ratio", f"{PortfolioState.sharpe_ratio:.2f}"),
-                perf_metric("Max Drawdown", f"{PortfolioState.max_drawdown:.2f}%"),
-                perf_metric("Win Rate", f"{PortfolioState.win_rate:.1f}%"),
-                columns="2",
-                spacing="4",
+    return rx.vstack(
+        rx.card(
+            rx.vstack(
+                rx.heading("Performance Metrics", size="5"),
+                rx.grid(
+                    perf_metric("Daily Return", f"{PortfolioState.daily_return:.2f}%"),
+                    perf_metric("Sharpe Ratio", f"{PortfolioState.sharpe_ratio:.2f}"),
+                    perf_metric("Max Drawdown", f"{PortfolioState.max_drawdown:.2f}%"),
+                    perf_metric("Win Rate", f"{PortfolioState.win_rate:.1f}%"),
+                    columns="2",
+                    spacing="4",
+                ),
             ),
+            width="95%",
+            margin="0 2rem",
+            style={"background": "rgba(45, 27, 61, 0.8)", "border": "1px solid #4c1d95"},
         ),
-        width="95%",
-        margin="0 2rem",
-        style={
-            "background": "rgba(45, 27, 61, 0.8)",
-            "border": "1px solid #4c1d95",
-        }
+        rx.card(
+            rx.vstack(
+                rx.heading("Portfolio vs BTC", size="5"),
+                rx.recharts.line_chart(
+                    rx.recharts.cartesian_grid(stroke_dasharray="3 3"),
+                    rx.recharts.line(data_key="portfolio_pct", stroke="#a855f7", name="Portfolio (%)", dot=False),
+                    rx.recharts.line(data_key="btc_pct", stroke="#22d3ee", name="BTC (%)", dot=False),
+                    rx.recharts.x_axis(data_key="date"),
+                    rx.recharts.y_axis(),
+                    rx.recharts.tooltip(),
+                    rx.recharts.legend(),
+                    data=PortfolioState.portfolio_vs_btc,
+                    height=320,
+                ),
+            ),
+            width="95%",
+            margin="1rem 2rem 2rem 2rem",
+            style={"background": "rgba(45, 27, 61, 0.8)", "border": "1px solid #4c1d95"},
+        ),
     )
 
 def perf_metric(label: str, value: str) -> rx.Component:

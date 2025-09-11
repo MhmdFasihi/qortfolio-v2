@@ -2,11 +2,12 @@
 
 import reflex as rx
 from ..volatility_state import VolatilityState
+from ..components.navigation import page_layout
 import plotly.graph_objects as go
 
 def volatility_page() -> rx.Component:
-    """Volatility analysis page"""
-    return rx.vstack(
+    """Volatility analysis page with sidebar"""
+    content = rx.vstack(
         # Header
         rx.hstack(
             rx.heading("Volatility Analysis", size="8", color="#a855f7"),
@@ -90,11 +91,9 @@ def volatility_page() -> rx.Component:
         ),
         
         width="100%",
-        style={
-            "background": "linear-gradient(135deg, #1a0033 0%, #220044 50%, #1a0033 100%)",
-            "min_height": "100vh",
-        },
+        width="100%",
     )
+    return page_layout(content, "Volatility Analysis")
 
 def vol_metric_card(label: str, value: rx.Var, color: str) -> rx.Component:
     """Volatility metric card"""
