@@ -137,7 +137,6 @@ def risk_page() -> rx.Component:
         ),
         
         width="100%",
-        width="100%",
     )
     return page_layout(content, "Risk Dashboard")
 
