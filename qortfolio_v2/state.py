@@ -20,7 +20,16 @@ class OptionsState(rx.State):
     total_contracts: int = 0
     avg_iv: float = 0.0
     max_oi: int = 0
+    total_volume: int = 0
     last_update: str = "Never"
+    spot_price: float = 0.0
+
+    @rx.var
+    def spot_display(self) -> str:
+        try:
+            return f"{float(self.spot_price):,.2f}"
+        except Exception:
+            return "-"
 
     # Expiry filter
     expiry_options: List[str] = []
@@ -35,12 +44,12 @@ class OptionsState(rx.State):
         """Set selected currency and fetch data"""
         self.selected_currency = currency
         # Return an event spec to avoid Reflex wrapping a bound method/partial.
-        return OptionsState.fetch_options_data()
+        return self.fetch_options_data()
 
     def set_expiry(self, expiry: str):
         """Set selected expiry and refresh data"""
         self.selected_expiry = expiry
-        return OptionsState.fetch_options_data()
+        return self.fetch_options_data()
 
     async def fetch_options_data(self):
         """Fetch options data with expiry filtering and robust fallbacks."""
@@ -113,6 +122,28 @@ class OptionsState(rx.State):
                 if (self.selected_expiry == "" or to_date_str(item.get("expiry")) == self.selected_expiry)
             ]
 
+            # Determine a spot price if present
+            try:
+                # Prefer any underlying_price present in data
+                spots = [float(d.get("underlying_price", 0) or 0) for d in filtered if isinstance(d, dict)]
+                spots = [s for s in spots if s > 0]
+                if spots:
+                    self.spot_price = sum(spots) / len(spots)
+                else:
+                    # Fallback: try Deribit index price
+                    try:
+                        from src.data.collectors.deribit_collector import DeribitCollector
+                        _c = DeribitCollector(testnet=False)
+                        self.spot_price = float(await _c.get_index_price(self.selected_currency))
+                        try:
+                            await _c.close()
+                        except Exception:
+                            pass
+                    except Exception:
+                        self.spot_price = 0.0
+            except Exception:
+                self.spot_price = 0.0
+
             # Normalize fields and split calls/puts
             def to_decimal_iv(x) -> float:
                 try:
@@ -141,6 +172,8 @@ class OptionsState(rx.State):
                 }
 
             normalized = [norm_row(opt) for opt in filtered]
+            # Order by strike ascending
+            normalized.sort(key=lambda r: r.get("strike", 0))
             self.calls_data = [r for r in normalized if r["option_type"] == "CALL"]
             self.puts_data = [r for r in normalized if r["option_type"] == "PUT"]
             self.options_data = normalized
@@ -158,6 +191,8 @@ class OptionsState(rx.State):
             self.avg_iv = (sum(ivs) / len(ivs)) if ivs else 0.0
             ois = [int(item.get("open_interest", 0) or 0) for item in filtered if isinstance(item, dict)]
             self.max_oi = max(ois) if ois else 0
+            volumes = [int(item.get("volume", 0) or 0) for item in filtered if isinstance(item, dict)]
+            self.total_volume = sum(volumes) if volumes else 0
 
         except Exception as e:
             print(f"Error fetching data: {e}")
@@ -168,6 +203,7 @@ class OptionsState(rx.State):
             self.total_contracts = 0
             self.avg_iv = 0.0
             self.max_oi = 0
+            self.total_volume = 0
         finally:
             self.loading = False
             self.last_update = datetime.now().strftime("%H:%M:%S")
