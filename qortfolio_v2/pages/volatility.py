@@ -91,7 +91,6 @@ def volatility_page() -> rx.Component:
         ),
         
         width="100%",
-        width="100%",
     )
     return page_layout(content, "Volatility Analysis")
 
