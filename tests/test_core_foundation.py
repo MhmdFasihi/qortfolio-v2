@@ -61,7 +61,7 @@ async def test_db():
     except Exception as e:
         print(f"   ❌ Database test failed: {e}")
 
-asyncio.run(test_db())
+# Let pytest run the async test; do not run it at import time.
 
 # Test 5: Exceptions
 print("\n5️⃣ Testing Exception Framework...")
