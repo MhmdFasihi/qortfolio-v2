@@ -145,6 +145,11 @@ def validate_time_calculation():
     logger.info("✅ Time calculation bug fix validated successfully!")
     return True
 
+# Backward-compatible module-level wrapper for tests that import the function directly.
+def calculate_time_to_maturity(current_time, expiry_time, annualized: bool = True) -> float:
+    """Module-level proxy to TimeUtils.calculate_time_to_maturity for compatibility."""
+    return TimeUtils.calculate_time_to_maturity(current_time, expiry_time, annualized)
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     validate_time_calculation()

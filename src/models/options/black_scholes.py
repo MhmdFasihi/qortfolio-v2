@@ -259,6 +259,41 @@ class BlackScholesModel:
             greeks['rho'] = rho_usd
         
         return greeks
+
+
+class BlackScholes:
+    """Backward-compatible wrapper used by some tests.
+
+    Provides a simplified calculate_option_price signature returning a float,
+    mapping to BlackScholesModel + OptionParameters under the hood.
+    """
+
+    def __init__(self):
+        self._model = BlackScholesModel()
+
+    def calculate_option_price(
+        self,
+        S: float,
+        K: float,
+        T: float,
+        r: float,
+        sigma: float,
+        option_type: str = 'call',
+        q: float = 0.0,
+        is_coin_based: bool = False,
+    ) -> float:
+        params = OptionParameters(
+            spot_price=S,
+            strike_price=K,
+            time_to_maturity=T,
+            volatility=sigma,
+            risk_free_rate=r,
+            dividend_yield=q,
+            option_type=option_type,
+            is_coin_based=is_coin_based,
+        )
+        result = self._model.calculate_option_price(params)
+        return float(result.option_price)
     
     def _calculate_intrinsic_value(self, S: float, K: float, option_type: str) -> float:
         """Calculate intrinsic value."""

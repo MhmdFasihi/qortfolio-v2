@@ -6,6 +6,7 @@ Verifies all critical components are working.
 
 import sys
 import asyncio
+import pytest
 from pathlib import Path
 
 # Add src to path
@@ -46,6 +47,7 @@ except Exception as e:
 
 # Test 4: Database Connection
 print("\n4️⃣ Testing Database Connection...")
+@pytest.mark.asyncio
 async def test_db():
     try:
         from src.core.database.connection import db_connection
