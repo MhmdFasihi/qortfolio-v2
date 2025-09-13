@@ -167,6 +167,24 @@ class BlackScholesModel:
     def _put_price(self, S: float, K: float, T: float, r: float, σ: float, q: float, d1: float, d2: float) -> float:
         """Calculate put option price (standard Black-Scholes)."""
         return K * np.exp(-r * T) * norm.cdf(-d2) - S * np.exp(-q * T) * norm.cdf(-d1)
+
+    def _calculate_intrinsic_value(self, S: float, K: float, option_type: str) -> float:
+        """Calculate intrinsic value."""
+        if option_type.lower() == 'call':
+            return max(S - K, 0)
+        else:  # put
+            return max(K - S, 0)
+
+    def _validate_parameters(self, params: OptionParameters) -> None:
+        """Validate option parameters."""
+        if params.spot_price <= 0:
+            raise ValueError("Spot price must be positive")
+        if params.strike_price <= 0:
+            raise ValueError("Strike price must be positive")
+        if params.time_to_maturity < 0:
+            raise ValueError("Time to maturity cannot be negative")
+        if params.volatility <= 0:
+            raise ValueError("Volatility must be positive")
     
     def _calculate_coin_based_price(self, S: float, K: float, T: float, r: float, σ: float, q: float, 
                                    d1: float, d2: float, option_type: str) -> float:
@@ -295,24 +313,6 @@ class BlackScholes:
         result = self._model.calculate_option_price(params)
         return float(result.option_price)
     
-    def _calculate_intrinsic_value(self, S: float, K: float, option_type: str) -> float:
-        """Calculate intrinsic value."""
-        if option_type.lower() == 'call':
-            return max(S - K, 0)
-        else:  # put
-            return max(K - S, 0)
-    
-    def _validate_parameters(self, params: OptionParameters) -> None:
-        """Validate option parameters."""
-        if params.spot_price <= 0:
-            raise ValueError("Spot price must be positive")
-        if params.strike_price <= 0:
-            raise ValueError("Strike price must be positive")
-        if params.time_to_maturity < 0:
-            raise ValueError("Time to maturity cannot be negative")
-        if params.volatility <= 0:
-            raise ValueError("Volatility must be positive")
-    
     def calculate_implied_volatility(self, market_price: float, params: OptionParameters,
                                     min_vol: float = 0.01, max_vol: float = 5.0) -> float:
         """
@@ -338,7 +338,7 @@ class BlackScholes:
                 option_type=params.option_type,
                 is_coin_based=params.is_coin_based
             )
-            theoretical_price = self.calculate_option_price(params_copy).option_price
+            theoretical_price = self._model.calculate_option_price(params_copy).option_price
             return theoretical_price - market_price
         
         try:
