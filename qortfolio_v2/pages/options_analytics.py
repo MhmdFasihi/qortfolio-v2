@@ -205,12 +205,8 @@ def volatility_surface_content() -> rx.Component:
                         rx.center(rx.spinner(color="purple", size="3")),
                         rx.cond(
                             OptionsState.volatility_surface_spec,
-                            rx.plotly(figure=OptionsState.volatility_surface_spec),
-                            rx.cond(
-                                OptionsState.volatility_surface_data,
-                                rx.plotly(data=OptionsState.volatility_surface_data),
-                                rx.text("No surface data available", color="#9ca3af"),
-                            ),
+                            rx.plotly(data=OptionsState.volatility_surface_plot),
+                            rx.plotly(data=OptionsState.volatility_surface_figure),
                         ),
                     ),
                 ),
@@ -252,7 +248,7 @@ def flow_analysis_content() -> rx.Component:
                 rx.vstack(
                     rx.heading("Flow Direction", size="5"),
                     rx.hstack(
-                        rx.icon("trending-up", size="6", color="#22c55e"),
+                        rx.icon("trending-up", size=6, color="#22c55e"),
                         rx.vstack(
                             rx.text("Current Flow", size="2", color="#9ca3af"),
                             rx.text(OptionsState.flow_direction, size="4", weight="bold"),

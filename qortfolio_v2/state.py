@@ -1,6 +1,7 @@
 """Enhanced State Management with MongoDB + Deribit fallback"""
 
 import reflex as rx
+import plotly.graph_objects as go
 from typing import Dict, List
 from datetime import datetime
 import asyncio
@@ -16,6 +17,8 @@ class OptionsState(rx.State):
 
     # Data
     options_data: List[Dict] = []
+    # Keep an unfiltered/raw copy for analytics like IV surface
+    raw_options_data: List[Dict] = []
     calls_data: List[Dict] = []
     puts_data: List[Dict] = []
     total_contracts: int = 0
@@ -141,16 +144,68 @@ class OptionsState(rx.State):
         except Exception:
             return "0.00"
 
-    def set_currency(self, currency: str):
+    @rx.var
+    def volatility_surface_figure(self) -> go.Figure:
+        """Create a 3D volatility surface figure from data."""
+        if not self.volatility_surface_data:
+            return go.Figure()
+        
+        # Extract data for 3D surface plot
+        strikes = []
+        expiries = []
+        ivs = []
+        
+        for point in self.volatility_surface_data:
+            if 'strike' in point and 'expiry' in point and 'iv' in point:
+                strikes.append(point['strike'])
+                expiries.append(point['expiry'])
+                ivs.append(point['iv'])
+        
+        if not strikes or not expiries or not ivs:
+            return go.Figure()
+        
+        # Create 3D surface plot
+        fig = go.Figure(data=[go.Surface(
+            z=ivs,
+            x=strikes,
+            y=expiries,
+            colorscale='Viridis',
+            name='Volatility Surface'
+        )])
+        
+        fig.update_layout(
+            title='Volatility Surface',
+            scene=dict(
+                xaxis_title='Strike Price',
+                yaxis_title='Expiry',
+                zaxis_title='Implied Volatility'
+            ),
+            margin=dict(l=0, r=0, t=30, b=0)
+        )
+        
+        return fig
+
+    @rx.var
+    def volatility_surface_plot(self) -> go.Figure:
+        """Build a Plotly Figure from stored surface spec (data/layout)."""
+        try:
+            spec = self.volatility_surface_spec or {}
+            if not spec:
+                return go.Figure()
+            # Let Plotly build the figure from dict spec
+            return go.Figure(spec)
+        except Exception:
+            return go.Figure()
+
+    async def set_currency(self, currency: str):
         """Set selected currency and fetch data"""
         self.selected_currency = currency
-        # Return an event spec to avoid Reflex wrapping a bound method/partial.
-        return self.fetch_options_data()
+        await self.fetch_options_data()
 
-    def set_expiry(self, expiry: str):
+    async def set_expiry(self, expiry: str):
         """Set selected expiry and refresh data"""
         self.selected_expiry = expiry
-        return self.fetch_options_data()
+        await self.fetch_options_data()
 
     def set_refresh_seconds(self, secs: str):
         """Update refresh interval from UI select (string -> int)."""
@@ -196,9 +251,18 @@ class OptionsState(rx.State):
 
             # Build surface
             builder = VolatilitySurfaceBuilder(db_ops)
+            # Use raw (unfiltered) options data for surface construction across expiries
+            data_for_surface = self.raw_options_data if self.raw_options_data else self.options_data
+            if not data_for_surface:
+                # Graceful no-op if there is no data
+                self.volatility_surface_data = []
+                self.volatility_surface_spec = {}
+                self.atm_term_structure_data = []
+                return
+
             surface = await builder.build_and_store_surface(
                 self.selected_currency,
-                self.options_data
+                data_for_surface
             )
 
             # Build serializable surface config (no Plotly Figure in state)
@@ -386,6 +450,9 @@ class OptionsState(rx.State):
                             pass
                 except Exception:
                     raw = []
+
+            # Preserve raw (unfiltered) data for analytics like IV surface
+            self.raw_options_data = raw.copy() if raw else []
 
             # Expiry choices
             expiries = sorted({to_date_str(item.get("expiry")) for item in raw if item.get("expiry")})

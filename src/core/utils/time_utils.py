@@ -62,7 +62,8 @@ class TimeUtils:
         time_diff = expiry_time - current_time
         
         if time_diff.total_seconds() <= 0:
-            logger.warning(f"Expiry time {expiry_time} is before current time {current_time}")
+            # Demote to debug to avoid noisy logs when filtering expired options
+            logger.debug(f"Expiry time {expiry_time} is before current time {current_time}")
             return 0.0
         
         if annualized:

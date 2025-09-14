@@ -121,11 +121,119 @@ class RiskMetrics:
     beta: float
     correlation_matrix: Dict[str, Dict[str, float]]
     timestamp: datetime = None
-    
+
     def __post_init__(self):
         if self.timestamp is None:
             self.timestamp = datetime.utcnow()
-    
+
+    def to_dict(self) -> Dict:
+        """Convert to dictionary for MongoDB."""
+        return asdict(self)
+
+
+@dataclass
+class VolatilitySurfaceData:
+    """Volatility surface data model."""
+    currency: str
+    spot_price: float
+    surface_data: Dict[str, Any]  # Grid data for interpolation
+    atm_term_structure: Dict[str, float]  # ATM vol by expiry
+    skew_data: Dict[str, Dict[str, float]]  # Vol skew by expiry
+    quality_metrics: Dict[str, float]  # Surface quality metrics
+    data_points_count: int
+    timestamp: datetime = None
+
+    def __post_init__(self):
+        if self.timestamp is None:
+            self.timestamp = datetime.utcnow()
+
+    def to_dict(self) -> Dict:
+        """Convert to dictionary for MongoDB."""
+        return asdict(self)
+
+
+@dataclass
+class OptionsChainAnalytics:
+    """Options chain analytics model."""
+    currency: str
+    total_call_volume: int
+    total_put_volume: int
+    call_put_ratio: float
+    total_call_oi: int
+    total_put_oi: int
+    call_put_oi_ratio: float
+    max_pain_strike: float
+    gamma_exposure: float
+    vanna_exposure: float
+    charm_exposure: float
+    avg_iv_calls: float
+    avg_iv_puts: float
+    iv_rank: float
+    term_structure_slope: float
+    skew_25d: float
+    flow_direction: str  # bullish, bearish, neutral
+    unusual_activity: List[Dict[str, Any]]
+    timestamp: datetime = None
+
+    def __post_init__(self):
+        if self.timestamp is None:
+            self.timestamp = datetime.utcnow()
+
+    def to_dict(self) -> Dict:
+        """Convert to dictionary for MongoDB."""
+        return asdict(self)
+
+
+@dataclass
+class GreeksSnapshot:
+    """Portfolio Greeks snapshot model."""
+    portfolio_id: str
+    currency: str
+    total_delta: float
+    total_gamma: float
+    total_theta: float
+    total_vega: float
+    total_rho: float
+    delta_dollars: float
+    gamma_dollars: float
+    portfolio_value: float
+    positions_count: int
+    by_underlying: Dict[str, Dict[str, float]]
+    by_expiry: Dict[str, Dict[str, float]]
+    timestamp: datetime = None
+
+    def __post_init__(self):
+        if self.timestamp is None:
+            self.timestamp = datetime.utcnow()
+
+    def to_dict(self) -> Dict:
+        """Convert to dictionary for MongoDB."""
+        return asdict(self)
+
+
+@dataclass
+class ImpliedVolatilityPoint:
+    """Individual IV data point model."""
+    currency: str
+    symbol: str
+    strike: float
+    expiry: datetime
+    option_type: str
+    spot_price: float
+    market_price: float
+    implied_volatility: float
+    moneyness: float
+    time_to_maturity: float
+    volume: int
+    open_interest: int
+    bid: Optional[float] = None
+    ask: Optional[float] = None
+    timestamp: datetime = None
+
+    def __post_init__(self):
+        if self.timestamp is None:
+            self.timestamp = datetime.utcnow()
+
     def to_dict(self) -> Dict:
         """Convert to dictionary for MongoDB."""
         return asdict(self)
@@ -175,6 +283,51 @@ SCHEMAS = {
         "sortino_ratio": float,
         "max_drawdown": float,
         "beta": float,
+        "timestamp": datetime
+    },
+    "volatility_surfaces": {
+        "currency": str,
+        "spot_price": float,
+        "surface_data": dict,
+        "atm_term_structure": dict,
+        "skew_data": dict,
+        "quality_metrics": dict,
+        "data_points_count": int,
+        "timestamp": datetime
+    },
+    "volatility_surfaces_history": {
+        "currency": str,
+        "spot_price": float,
+        "surface_data": dict,
+        "timestamp": datetime
+    },
+    "options_chain_analytics": {
+        "currency": str,
+        "total_call_volume": int,
+        "total_put_volume": int,
+        "call_put_ratio": float,
+        "max_pain_strike": float,
+        "gamma_exposure": float,
+        "flow_direction": str,
+        "timestamp": datetime
+    },
+    "greeks_snapshots": {
+        "portfolio_id": str,
+        "currency": str,
+        "total_delta": float,
+        "total_gamma": float,
+        "total_theta": float,
+        "total_vega": float,
+        "portfolio_value": float,
+        "timestamp": datetime
+    },
+    "implied_volatility_points": {
+        "currency": str,
+        "symbol": str,
+        "strike": float,
+        "implied_volatility": float,
+        "moneyness": float,
+        "volume": int,
         "timestamp": datetime
     }
 }
