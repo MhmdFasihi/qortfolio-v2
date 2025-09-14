@@ -27,6 +27,9 @@ class VolatilityState(rx.State):
     # Loading states
     loading: bool = False
     db_status: str = "Not Connected"
+    # Auto refresh
+    auto_refresh: bool = False
+    refresh_seconds: int = 60
     
     @rx.var
     def iv_display(self) -> str:
@@ -55,6 +58,27 @@ class VolatilityState(rx.State):
         """Set period and fetch data"""
         self.selected_period = period
         return VolatilityState.fetch_volatility_data()
+
+    def set_refresh_seconds(self, secs: str):
+        try:
+            self.refresh_seconds = int(secs)
+        except Exception:
+            self.refresh_seconds = 60
+
+    async def start_auto_refresh(self):
+        if self.auto_refresh:
+            return
+        self.auto_refresh = True
+        try:
+            while self.auto_refresh:
+                await self.fetch_volatility_data()
+                delay = self.refresh_seconds if self.refresh_seconds and self.refresh_seconds > 0 else 60
+                await asyncio.sleep(delay)
+        except Exception:
+            self.auto_refresh = False
+
+    def stop_auto_refresh(self):
+        self.auto_refresh = False
     
     async def fetch_volatility_data(self):
         """Fetch real volatility data from MongoDB"""

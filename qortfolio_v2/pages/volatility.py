@@ -23,7 +23,7 @@ def volatility_page() -> rx.Component:
             padding="2rem",
         ),
         
-        # Controls
+        # Controls + Auto-refresh
         rx.hstack(
             rx.text("Currency:", size="4", weight="bold"),
             rx.select(
@@ -37,6 +37,9 @@ def volatility_page() -> rx.Component:
                 value=VolatilityState.selected_period,
                 on_change=VolatilityState.set_period,
             ),
+            rx.text("Auto:", size="3", margin_left="2rem"),
+            rx.switch(is_checked=VolatilityState.auto_refresh, on_change=lambda v: VolatilityState.start_auto_refresh() if v else VolatilityState.stop_auto_refresh()),
+            rx.select(["15","30","60","120"], value=VolatilityState.refresh_seconds.to_string(), on_change=VolatilityState.set_refresh_seconds, width="80px"),
             spacing="4",
             padding="0 2rem",
         ),

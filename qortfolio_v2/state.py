@@ -34,6 +34,9 @@ class OptionsState(rx.State):
     # Expiry filter
     expiry_options: List[str] = []
     selected_expiry: str = ""
+    # Auto refresh
+    auto_refresh: bool = False
+    refresh_seconds: int = 60
 
     @rx.var
     def avg_iv_pct(self) -> str:
@@ -50,6 +53,33 @@ class OptionsState(rx.State):
         """Set selected expiry and refresh data"""
         self.selected_expiry = expiry
         return self.fetch_options_data()
+
+    def set_refresh_seconds(self, secs: str):
+        """Update refresh interval from UI select (string -> int)."""
+        try:
+            self.refresh_seconds = int(secs)
+        except Exception:
+            self.refresh_seconds = 60
+
+    async def start_auto_refresh(self):
+        """Start periodic refresh loop."""
+        if self.auto_refresh:
+            return
+        self.auto_refresh = True
+        # Run a background loop
+        try:
+            while self.auto_refresh:
+                await self.fetch_options_data()
+                # Avoid zero/negative
+                delay = self.refresh_seconds if self.refresh_seconds and self.refresh_seconds > 0 else 60
+                await asyncio.sleep(delay)
+        except Exception:
+            # Stop on error to avoid runaway logs
+            self.auto_refresh = False
+
+    def stop_auto_refresh(self):
+        """Stop periodic refresh loop."""
+        self.auto_refresh = False
 
     async def fetch_options_data(self):
         """Fetch options data with expiry filtering and robust fallbacks."""
