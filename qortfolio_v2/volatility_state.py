@@ -3,6 +3,7 @@
 import reflex as rx
 from typing import Dict, List
 from datetime import datetime
+import asyncio
 
 class VolatilityState(rx.State):
     """Volatility analysis state with MongoDB data"""
@@ -64,6 +65,12 @@ class VolatilityState(rx.State):
             self.refresh_seconds = int(secs)
         except Exception:
             self.refresh_seconds = 60
+
+    def toggle_auto_refresh(self, value: bool):
+        if bool(value):
+            return VolatilityState.start_auto_refresh()
+        else:
+            return VolatilityState.stop_auto_refresh()
 
     async def start_auto_refresh(self):
         if self.auto_refresh:

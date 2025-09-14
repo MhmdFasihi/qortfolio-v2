@@ -3,6 +3,7 @@
 import reflex as rx
 from typing import Dict, List
 from datetime import datetime
+import asyncio
 
 
 class OptionsState(rx.State):
@@ -60,6 +61,13 @@ class OptionsState(rx.State):
             self.refresh_seconds = int(secs)
         except Exception:
             self.refresh_seconds = 60
+
+    def toggle_auto_refresh(self, value: bool):
+        """Handle switch toggle for auto refresh."""
+        if bool(value):
+            return OptionsState.start_auto_refresh()
+        else:
+            return OptionsState.stop_auto_refresh()
 
     async def start_auto_refresh(self):
         """Start periodic refresh loop."""

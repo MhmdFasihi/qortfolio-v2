@@ -29,7 +29,7 @@ def options_analytics_page() -> rx.Component:
             rx.text("Expiry:", size="4", weight="bold", margin_left="2rem"),
             rx.select(OptionsState.expiry_options, value=OptionsState.selected_expiry, on_change=OptionsState.set_expiry, placeholder="Select expiry"),
             rx.text("Auto:", size="3", margin_left="2rem"),
-            rx.switch(is_checked=OptionsState.auto_refresh, on_change=lambda v: OptionsState.start_auto_refresh() if v else OptionsState.stop_auto_refresh()),
+            rx.switch(is_checked=OptionsState.auto_refresh, on_change=OptionsState.toggle_auto_refresh),
             rx.select(["15","30","60","120"], value=OptionsState.refresh_seconds.to_string(), on_change=OptionsState.set_refresh_seconds, width="80px"),
             rx.spacer(),
             rx.text("Spot:", color="#9ca3af"),
