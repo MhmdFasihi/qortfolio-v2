@@ -1,174 +1,128 @@
-# Copyright (c) 2025 Seyed Mohammad Hossein Fasihi (Mhmd Fasihi)
-# This file is part of a project licensed under AGPLv3 or a commercial license.
-# AGPLv3: https://www.gnu.org/licenses/agpl-3.0.html
-# Contact for commercial licensing: mhmd.fasihi@gmail.com
+"""Database CRUD Operations for MongoDB"""
 
-"""
-Database operations for Qortfolio V2.
-Provides CRUD operations for all collections.
-"""
-
-import asyncio
 from typing import Dict, List, Optional, Any
-from datetime import datetime, timedelta
-import logging
-from pymongo import ASCENDING, DESCENDING
+from datetime import datetime
+from pymongo import UpdateOne
 from .connection import db_connection
-from .models import OptionsData, PriceData, PortfolioPosition, RiskMetrics
-from ..exceptions import DatabaseOperationError
+import logging
 
 logger = logging.getLogger(__name__)
 
 class DatabaseOperations:
-    """Database operations manager."""
+    """MongoDB CRUD operations handler"""
     
     def __init__(self):
-        self.connection = db_connection
-        # Defer establishing a sync connection to avoid noisy failures at import time.
-        # Tests and optional code paths already guard on None.
-        self._db = None
-
-    @property
-    def db(self):
-        """Expose sync database handle if available (for tests)."""
-        return self._db
+        self.db = db_connection
         
-    # === Options Data Operations ===
-    
-    async def insert_options_data(self, options: OptionsData) -> str:
-        """Insert options data."""
+    # CREATE Operations
+    def insert_one(self, collection_name: str, document: Dict) -> Optional[str]:
+        """Insert single document"""
         try:
-            db = await self.connection.get_database_async()
-            result = await db.options_data.insert_one(options.to_dict())
-            return str(result.inserted_id)
+            collection = self.db.get_collection(collection_name)
+            if collection is not None:
+                document['timestamp'] = datetime.now()
+                result = collection.insert_one(document)
+                return str(result.inserted_id)
         except Exception as e:
-            logger.error(f"Failed to insert options data: {e}")
-            raise DatabaseOperationError(f"Insert failed: {e}")
+            logger.error(f"Insert error: {e}")
+        return None
     
-    async def get_latest_options(
-        self, 
-        underlying: str, 
-        limit: int = 100
-    ) -> List[Dict]:
-        """Get latest options data for an underlying."""
+    def insert_many(self, collection_name: str, documents: List[Dict]) -> List[str]:
+        """Insert multiple documents"""
         try:
-            db = await self.connection.get_database_async()
-            cursor = db.options_data.find(
-                {"underlying": underlying}
-            ).sort("timestamp", DESCENDING).limit(limit)
-            
-            return await cursor.to_list(length=limit)
+            collection = self.db.get_collection(collection_name)
+            if collection is not None:
+                for doc in documents:
+                    doc['timestamp'] = datetime.now()
+                result = collection.insert_many(documents)
+                return [str(id) for id in result.inserted_ids]
         except Exception as e:
-            logger.error(f"Failed to get options data: {e}")
-            raise DatabaseOperationError(f"Query failed: {e}")
+            logger.error(f"Bulk insert error: {e}")
+        return []
     
-    # === Price Data Operations ===
-    
-    async def insert_price_data(self, price: PriceData) -> str:
-        """Insert price data."""
+    # READ Operations
+    def find_one(self, collection_name: str, query: Dict) -> Optional[Dict]:
+        """Find single document"""
         try:
-            db = await self.connection.get_database_async()
-            result = await db.price_data.insert_one(price.to_dict())
-            return str(result.inserted_id)
+            collection = self.db.get_collection(collection_name)
+            if collection is not None:
+                return collection.find_one(query)
         except Exception as e:
-            logger.error(f"Failed to insert price data: {e}")
-            raise DatabaseOperationError(f"Insert failed: {e}")
+            logger.error(f"Find error: {e}")
+        return None
     
-    async def get_price_history(
-        self,
-        symbol: str,
-        days: int = 30
-    ) -> List[Dict]:
-        """Get price history for a symbol."""
+    def find_many(self, collection_name: str, query: Dict = None, 
+                  limit: int = 100, sort: List = None) -> List[Dict]:
+        """Find multiple documents"""
         try:
-            db = await self.connection.get_database_async()
-            start_date = datetime.utcnow() - timedelta(days=days)
-            
-            cursor = db.price_data.find({
-                "symbol": symbol,
-                "timestamp": {"$gte": start_date}
-            }).sort("timestamp", ASCENDING)
-            
-            return await cursor.to_list(length=None)
+            collection = self.db.get_collection(collection_name)
+            if collection is not None:
+                query = query or {}
+                cursor = collection.find(query).limit(limit)
+                if sort:
+                    cursor = cursor.sort(sort)
+                return list(cursor)
         except Exception as e:
-            logger.error(f"Failed to get price history: {e}")
-            raise DatabaseOperationError(f"Query failed: {e}")
+            logger.error(f"Find many error: {e}")
+        return []
     
-    # === Portfolio Operations ===
-    
-    async def update_portfolio_position(
-        self,
-        position: PortfolioPosition
-    ) -> bool:
-        """Update or insert portfolio position."""
+    # UPDATE Operations
+    def update_one(self, collection_name: str, query: Dict, 
+                   update: Dict, upsert: bool = False) -> bool:
+        """Update single document"""
         try:
-            db = await self.connection.get_database_async()
-            result = await db.portfolio_positions.update_one(
-                {
-                    "user_id": position.user_id,
-                    "symbol": position.symbol
-                },
-                {"$set": position.to_dict()},
-                upsert=True
-            )
-            return result.modified_count > 0 or result.upserted_id is not None
+            collection = self.db.get_collection(collection_name)
+            if collection is not None:
+                update['$set'] = update.get('$set', {})
+                update['$set']['updated_at'] = datetime.now()
+                result = collection.update_one(query, update, upsert=upsert)
+                return result.modified_count > 0 or result.upserted_id is not None
         except Exception as e:
-            logger.error(f"Failed to update portfolio position: {e}")
-            raise DatabaseOperationError(f"Update failed: {e}")
+            logger.error(f"Update error: {e}")
+        return False
     
-    # === Risk Metrics Operations ===
-    
-    async def store_risk_metrics(self, metrics: RiskMetrics) -> str:
-        """Store risk metrics."""
+    def bulk_update(self, collection_name: str, updates: List[Dict]) -> int:
+        """Bulk update operations"""
         try:
-            db = await self.connection.get_database_async()
-            result = await db.risk_metrics.insert_one(metrics.to_dict())
-            return str(result.inserted_id)
+            collection = self.db.get_collection(collection_name)
+            if collection is not None:
+                operations = []
+                for update in updates:
+                    operations.append(
+                        UpdateOne(
+                            update['filter'],
+                            {'$set': update['update']},
+                            upsert=update.get('upsert', False)
+                        )
+                    )
+                result = collection.bulk_write(operations)
+                return result.modified_count
         except Exception as e:
-            logger.error(f"Failed to store risk metrics: {e}")
-            raise DatabaseOperationError(f"Insert failed: {e}")
+            logger.error(f"Bulk update error: {e}")
+        return 0
     
-    # === Utility Operations ===
-    
-    async def create_indexes(self):
-        """Create database indexes for performance."""
+    # DELETE Operations
+    def delete_one(self, collection_name: str, query: Dict) -> bool:
+        """Delete single document"""
         try:
-            db = await self.connection.get_database_async()
-            
-            # Options data indexes
-            await db.options_data.create_index([
-                ("underlying", ASCENDING),
-                ("timestamp", DESCENDING)
-            ])
-            await db.options_data.create_index("expiry")
-            
-            # Price data indexes
-            await db.price_data.create_index([
-                ("symbol", ASCENDING),
-                ("timestamp", DESCENDING)
-            ])
-            
-            # Portfolio indexes
-            await db.portfolio_positions.create_index([
-                ("user_id", ASCENDING),
-                ("symbol", ASCENDING)
-            ])
-            
-            logger.info("✅ Database indexes created successfully")
+            collection = self.db.get_collection(collection_name)
+            if collection is not None:
+                result = collection.delete_one(query)
+                return result.deleted_count > 0
         except Exception as e:
-            logger.error(f"Failed to create indexes: {e}")
-            raise DatabaseOperationError(f"Index creation failed: {e}")
+            logger.error(f"Delete error: {e}")
+        return False
+    
+    def delete_many(self, collection_name: str, query: Dict) -> int:
+        """Delete multiple documents"""
+        try:
+            collection = self.db.get_collection(collection_name)
+            if collection is not None:
+                result = collection.delete_many(query)
+                return result.deleted_count
+        except Exception as e:
+            logger.error(f"Delete many error: {e}")
+        return 0
 
-# Global database operations instance
+# Create singleton instance
 db_ops = DatabaseOperations()
-
-if __name__ == "__main__":
-    # Test database operations
-    async def test_operations():
-        try:
-            await db_ops.create_indexes()
-            print("✅ Database operations initialized")
-        except Exception as e:
-            print(f"❌ Database operations test failed: {e}")
-    
-    asyncio.run(test_operations())

@@ -1,39 +1,66 @@
-"""Export utilities for data download"""
+"""Working Export Utilities"""
 
 import reflex as rx
 import pandas as pd
 import json
+import io
+import base64
 from typing import List, Dict
 from datetime import datetime
 
-class ExportUtils:
-    """Utilities for exporting data"""
+class ExportState(rx.State):
+    """State for handling exports"""
     
-    @staticmethod
-    def export_to_csv(data: List[Dict], filename: str = None) -> str:
-        """Convert data to CSV format"""
+    download_url: str = ""
+    download_filename: str = ""
+    
+    def export_to_csv(self, data: List[Dict], filename: str = None):
+        """Export data to CSV with download"""
         if not data:
-            return ""
+            return
         
+        # Create DataFrame
         df = pd.DataFrame(data)
+        
+        # Generate filename
         if filename is None:
             filename = f"qortfolio_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
         
-        return df.to_csv(index=False)
-    
-    @staticmethod
-    def export_to_json(data: List[Dict], filename: str = None) -> str:
-        """Convert data to JSON format"""
-        if not data:
-            return "{}"
+        # Convert to CSV
+        csv_buffer = io.StringIO()
+        df.to_csv(csv_buffer, index=False)
+        csv_string = csv_buffer.getvalue()
         
+        # Create data URL for download
+        b64 = base64.b64encode(csv_string.encode()).decode()
+        self.download_url = f"data:text/csv;base64,{b64}"
+        self.download_filename = filename
+        
+        # Trigger download
+        return rx.download(url=self.download_url, filename=self.download_filename)
+    
+    def export_to_json(self, data: List[Dict], filename: str = None):
+        """Export data to JSON with download"""
+        if not data:
+            return
+        
+        # Generate filename
         if filename is None:
             filename = f"qortfolio_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         
-        return json.dumps(data, indent=2, default=str)
+        # Convert to JSON
+        json_string = json.dumps(data, indent=2, default=str)
+        
+        # Create data URL for download
+        b64 = base64.b64encode(json_string.encode()).decode()
+        self.download_url = f"data:application/json;base64,{b64}"
+        self.download_filename = filename
+        
+        # Trigger download
+        return rx.download(url=self.download_url, filename=self.download_filename)
 
-def export_button(data: List[Dict], filename: str = "export") -> rx.Component:
-    """Create export button with download functionality"""
+def export_button(data_state_var: str) -> rx.Component:
+    """Create working export button"""
     return rx.menu(
         rx.menu_button(
             rx.button(
@@ -46,25 +73,15 @@ def export_button(data: List[Dict], filename: str = "export") -> rx.Component:
         rx.menu_content(
             rx.menu_item(
                 "Export as CSV",
-                on_click=lambda: download_csv(data, filename),
+                on_click=lambda: ExportState.export_to_csv(
+                    getattr(rx.State, data_state_var)
+                ),
             ),
             rx.menu_item(
-                "Export as JSON",
-                on_click=lambda: download_json(data, filename),
+                "Export as JSON", 
+                on_click=lambda: ExportState.export_to_json(
+                    getattr(rx.State, data_state_var)
+                ),
             ),
         ),
     )
-
-def download_csv(data: List[Dict], filename: str):
-    """Trigger CSV download"""
-    csv_content = ExportUtils.export_to_csv(data, f"{filename}.csv")
-    # In a real implementation, this would trigger a download
-    # For now, we'll just print to console
-    print(f"Downloading {filename}.csv")
-    return csv_content
-
-def download_json(data: List[Dict], filename: str):
-    """Trigger JSON download"""
-    json_content = ExportUtils.export_to_json(data, f"{filename}.json")
-    print(f"Downloading {filename}.json")
-    return json_content
