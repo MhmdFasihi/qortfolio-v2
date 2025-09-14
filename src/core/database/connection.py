@@ -222,6 +222,15 @@ class DatabaseConnection:
         except Exception:
             return False
 
+    # === Backward-compatible helper used by simple CRUD layer ===
+    def get_collection(self, collection_name: str):
+        """Return a sync collection handle or None if unavailable."""
+        try:
+            db = self.get_database()
+            return db[collection_name]
+        except Exception:
+            return None
+
 
 # Global connection instance
 db_connection = DatabaseConnection()

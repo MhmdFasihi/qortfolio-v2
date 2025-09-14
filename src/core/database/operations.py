@@ -26,6 +26,17 @@ class DatabaseOperations:
         except Exception as e:
             logger.error(f"Insert error: {e}")
         return None
+
+    # === Async convenience queries used by UI layers ===
+    async def get_latest_options(self, underlying: str, limit: int = 100) -> List[Dict]:
+        """Fetch latest options for an underlying (async, motor)."""
+        try:
+            adb = await self.db.get_database_async()
+            cursor = adb.options_data.find({"underlying": underlying}).sort("timestamp", -1).limit(limit)
+            return await cursor.to_list(length=limit)
+        except Exception as e:
+            logger.error(f"get_latest_options error: {e}")
+            return []
     
     def insert_many(self, collection_name: str, documents: List[Dict]) -> List[str]:
         """Insert multiple documents"""
