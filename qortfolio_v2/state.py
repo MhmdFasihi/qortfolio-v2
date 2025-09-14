@@ -52,6 +52,7 @@ class OptionsState(rx.State):
     # Volatility Surface
     surface_loading: bool = False
     volatility_surface_data: List[Dict] = []
+    volatility_surface_spec: Dict = {}
     atm_term_structure_data: List[Dict] = []
 
     # Flow Analysis
@@ -206,9 +207,19 @@ class OptionsState(rx.State):
                 x = surface_grid.get('strikes_range', [])
                 y = surface_grid.get('time_range', [])
                 z = surface_grid.get('iv_grid', [])
-                self.volatility_surface_data = [{
-                    'type': 'surface', 'x': x, 'y': y, 'z': z, 'colorscale': 'Viridis'
-                }]
+                trace = {'type': 'surface', 'x': x, 'y': y, 'z': z, 'colorscale': 'Viridis'}
+                layout = {
+                    'title': 'Implied Volatility Surface',
+                    'scene': {
+                        'xaxis': {'title': 'Strike'},
+                        'yaxis': {'title': 'Days to Expiry'},
+                        'zaxis': {'title': 'Implied Volatility'},
+                    },
+                    'paper_bgcolor': 'rgba(0,0,0,0)',
+                    'plot_bgcolor': 'rgba(0,0,0,0)'
+                }
+                self.volatility_surface_data = [trace]
+                self.volatility_surface_spec = {'data': [trace], 'layout': layout}
 
                 # Create term structure data
                 atm_data = []
@@ -222,6 +233,7 @@ class OptionsState(rx.State):
         except Exception as e:
             print(f"Surface building failed: {e}")
             self.volatility_surface_data = []
+            self.volatility_surface_spec = {}
             self.atm_term_structure_data = []
         finally:
             self.surface_loading = False
