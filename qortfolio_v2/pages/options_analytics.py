@@ -204,21 +204,13 @@ def volatility_surface_content() -> rx.Component:
                         OptionsState.surface_loading,
                         rx.center(rx.spinner(color="purple", size="3")),
                         rx.cond(
-                            OptionsState.volatility_surface_data,
-                            rx.plotly(
-                                data=OptionsState.volatility_surface_data,
-                                layout={
-                                    "title": "Implied Volatility Surface",
-                                    "scene": {
-                                        "xaxis": {"title": "Strike"},
-                                        "yaxis": {"title": "Days to Expiry"},
-                                        "zaxis": {"title": "Implied Volatility"},
-                                    },
-                                    "paper_bgcolor": "rgba(0,0,0,0)",
-                                    "plot_bgcolor": "rgba(0,0,0,0)",
-                                },
+                            OptionsState.volatility_surface_figure,
+                            rx.plotly(data=OptionsState.volatility_surface_figure),
+                            rx.cond(
+                                OptionsState.volatility_surface_data,
+                                rx.plotly(data=OptionsState.volatility_surface_data),
+                                rx.text("No surface data available", color="#9ca3af"),
                             ),
-                            rx.text("No surface data available", color="#9ca3af"),
                         ),
                     ),
                 ),
