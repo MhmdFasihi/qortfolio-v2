@@ -4,7 +4,6 @@ import reflex as rx
 from typing import Dict, List
 from datetime import datetime
 import asyncio
-import plotly.graph_objects as go
 
 
 class OptionsState(rx.State):
@@ -52,8 +51,7 @@ class OptionsState(rx.State):
 
     # Volatility Surface
     surface_loading: bool = False
-    volatility_surface_data: List[Dict] = []  # legacy config form
-    volatility_surface_figure: object = None   # Plotly Figure for Reflex 0.8
+    volatility_surface_data: List[Dict] = []
     atm_term_structure_data: List[Dict] = []
 
     # Flow Analysis
@@ -202,31 +200,15 @@ class OptionsState(rx.State):
                 self.options_data
             )
 
-            # Convert surface to Plotly Figure (preferred in Reflex 0.8)
+            # Build serializable surface config (no Plotly Figure in state)
             if surface and surface.surface_data:
                 surface_grid = surface.surface_data
                 x = surface_grid.get('strikes_range', [])
                 y = surface_grid.get('time_range', [])
                 z = surface_grid.get('iv_grid', [])
-
-                try:
-                    fig = go.Figure(data=[go.Surface(x=x, y=y, z=z, colorscale='Viridis')])
-                    fig.update_layout(
-                        title='Implied Volatility Surface',
-                        scene=dict(
-                            xaxis_title='Strike',
-                            yaxis_title='Days to Expiry',
-                            zaxis_title='Implied Volatility',
-                        ),
-                        paper_bgcolor='rgba(0,0,0,0)',
-                        plot_bgcolor='rgba(0,0,0,0)'
-                    )
-                    self.volatility_surface_figure = fig
-                except Exception:
-                    # Fallback: keep legacy config list
-                    self.volatility_surface_data = [{
-                        'type': 'surface', 'x': x, 'y': y, 'z': z, 'colorscale': 'Viridis'
-                    }]
+                self.volatility_surface_data = [{
+                    'type': 'surface', 'x': x, 'y': y, 'z': z, 'colorscale': 'Viridis'
+                }]
 
                 # Create term structure data
                 atm_data = []
@@ -240,7 +222,6 @@ class OptionsState(rx.State):
         except Exception as e:
             print(f"Surface building failed: {e}")
             self.volatility_surface_data = []
-            self.volatility_surface_figure = None
             self.atm_term_structure_data = []
         finally:
             self.surface_loading = False
