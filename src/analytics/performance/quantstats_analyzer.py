@@ -124,6 +124,33 @@ class QuantStatsAnalyzer:
                     return float(-q)
                 return float(-_np.nanmean(tail.values))
 
+            # Drawdown helpers
+            nav = (1.0 + portfolio_returns).cumprod()
+            running_max = nav.cummax()
+            dd = (nav / running_max) - 1.0
+
+            # Average drawdown (negative value)
+            try:
+                avg_dd = float(dd[dd < 0].mean()) if (dd < 0).any() else 0.0
+            except Exception:
+                avg_dd = 0.0
+
+            # Drawdown durations (consecutive days in drawdown)
+            try:
+                dd_bool = dd < 0
+                if len(dd_bool) > 0:
+                    groups = (dd_bool != dd_bool.shift(fill_value=False)).cumsum()
+                    lengths = dd_bool.groupby(groups).sum()
+                    dd_lengths = lengths[lengths > 0]
+                    avg_dd_days = float(dd_lengths.mean()) if len(dd_lengths) > 0 else 0.0
+                    max_dd_days = float(dd_lengths.max()) if len(dd_lengths) > 0 else 0.0
+                else:
+                    avg_dd_days = 0.0
+                    max_dd_days = 0.0
+            except Exception:
+                avg_dd_days = 0.0
+                max_dd_days = 0.0
+
             metrics = {
                 # Returns
                 'total_return': float(qs.stats.comp(portfolio_returns)),
@@ -141,9 +168,9 @@ class QuantStatsAnalyzer:
 
                 # Drawdown metrics
                 'max_drawdown': float(qs.stats.max_drawdown(portfolio_returns)),
-                'avg_drawdown': float(qs.stats.avg_drawdown(portfolio_returns)),
-                'avg_drawdown_days': float(qs.stats.avg_drawdown_days(portfolio_returns)),
-                'max_drawdown_days': float(qs.stats.max_drawdown_days(portfolio_returns)),
+                'avg_drawdown': avg_dd,
+                'avg_drawdown_days': avg_dd_days,
+                'max_drawdown_days': max_dd_days,
 
                 # Distribution metrics
                 'skewness': float(qs.stats.skew(portfolio_returns)),
