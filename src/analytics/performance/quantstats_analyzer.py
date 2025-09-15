@@ -112,6 +112,18 @@ class QuantStatsAnalyzer:
         """
         try:
             # Basic performance metrics
+            # Helper: historical VaR and CVaR
+            import numpy as _np
+            def _hist_var(ret: pd.Series, alpha: float) -> float:
+                q = _np.nanquantile(ret.values, alpha)
+                return float(-q)
+            def _hist_cvar(ret: pd.Series, alpha: float) -> float:
+                q = _np.nanquantile(ret.values, alpha)
+                tail = ret[ret <= q]
+                if len(tail) == 0:
+                    return float(-q)
+                return float(-_np.nanmean(tail.values))
+
             metrics = {
                 # Returns
                 'total_return': float(qs.stats.comp(portfolio_returns)),
@@ -124,8 +136,8 @@ class QuantStatsAnalyzer:
                 'sortino_ratio': float(qs.stats.sortino(portfolio_returns)),
                 'calmar_ratio': float(qs.stats.calmar(portfolio_returns)),
                 'omega_ratio': float(qs.stats.omega(portfolio_returns)),
-                'value_at_risk': float(qs.stats.value_at_risk(portfolio_returns, cutoff=0.05)),
-                'conditional_value_at_risk': float(qs.stats.conditional_value_at_risk(portfolio_returns, cutoff=0.05)),
+                'value_at_risk': _hist_var(portfolio_returns, 0.05),
+                'conditional_value_at_risk': _hist_cvar(portfolio_returns, 0.05),
 
                 # Drawdown metrics
                 'max_drawdown': float(qs.stats.max_drawdown(portfolio_returns)),

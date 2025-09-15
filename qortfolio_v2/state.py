@@ -816,8 +816,12 @@ class RiskState(rx.State):
     async def _update_attribution_analysis(self):
         """Update performance attribution data"""
         try:
-            from ..src.analytics.performance.quantstats_analyzer import QuantStatsAnalyzer
-            from ..src.core.database.connection import get_database_async
+            import sys
+            import os
+            # Ensure src is on path for absolute imports
+            sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+            from src.analytics.performance.quantstats_analyzer import QuantStatsAnalyzer
+            from src.core.database.connection import get_database_async
 
             db = await get_database_async()
             performance_analyzer = QuantStatsAnalyzer(db)

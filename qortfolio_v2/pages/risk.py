@@ -3,7 +3,7 @@
 import reflex as rx
 from typing import Dict
 from ..components.navigation import page_layout
-from ..risk_state import RiskState
+from ..state import RiskState
 
 def risk_page() -> rx.Component:
     """Risk dashboard page with sidebar"""
@@ -13,8 +13,8 @@ def risk_page() -> rx.Component:
             rx.heading("Risk Dashboard", size="8", color="#a855f7"),
             rx.spacer(),
             rx.button(
-                "Refresh",
-                on_click=RiskState.fetch_risk_data,
+                "Calculate Risk",
+                on_click=RiskState.calculate_portfolio_risk,
                 loading=RiskState.loading,
                 color_scheme="purple",
                 size="3",
@@ -23,15 +23,12 @@ def risk_page() -> rx.Component:
             padding="2rem",
         ),
         
-        # Risk Score Banner
-        risk_score_banner(),
-        
         # Primary Risk Metrics
         rx.grid(
-            risk_metric_card("VaR (95%)", RiskState.var_display, "red"),
-            risk_metric_card("CVaR (95%)", RiskState.cvar_display, "orange"),
-            risk_metric_card("Beta", f"{RiskState.beta:.2f}", "blue"),
-            risk_metric_card("BTC Correlation", f"{RiskState.correlation_to_btc:.2f}", "purple"),
+            risk_metric_card("VaR (95%)", RiskState.var_95_display, "red"),
+            risk_metric_card("CVaR (95%)", RiskState.cvar_95_display, "orange"),
+            risk_metric_card("Max Drawdown", RiskState.max_drawdown_display, "blue"),
+            risk_metric_card("Sharpe", RiskState.sharpe_ratio_display, "purple"),
             columns="4",
             spacing="4",
             width="100%",
@@ -66,15 +63,12 @@ def risk_page() -> rx.Component:
                 rx.vstack(
                     rx.heading("VaR History", size="5"),
                     rx.recharts.line_chart(
-                        rx.recharts.line(
-                            data_key="value",
-                            stroke="#ef4444",
-                            stroke_width=2,
-                        ),
+                        rx.recharts.line(data_key="var_95", stroke="#ef4444", name="VaR 95%"),
+                        rx.recharts.line(data_key="var_99", stroke="#f97316", name="VaR 99%"),
                         rx.recharts.x_axis(data_key="date"),
                         rx.recharts.y_axis(),
                         rx.recharts.tooltip(),
-                        data=RiskState.var_history,
+                        data=RiskState.var_history_data,
                         height=250,
                     ),
                 ),
@@ -87,14 +81,14 @@ def risk_page() -> rx.Component:
                     rx.heading("Drawdown History", size="5"),
                     rx.recharts.area_chart(
                         rx.recharts.area(
-                            data_key="value",
+                            data_key="drawdown",
                             fill="#f87171",
                             stroke="#ef4444",
                         ),
                         rx.recharts.x_axis(data_key="date"),
                         rx.recharts.y_axis(),
                         rx.recharts.tooltip(),
-                        data=RiskState.drawdown_history,
+                        data=RiskState.drawdown_data,
                         height=250,
                     ),
                 ),
@@ -107,34 +101,7 @@ def risk_page() -> rx.Component:
             margin="0 2rem",
         ),
         
-        # Risk Alerts
-        rx.card(
-            rx.vstack(
-                rx.hstack(
-                    rx.heading("Risk Alerts", size="5"),
-                    rx.spacer(),
-                    rx.button(
-                        "Clear All",
-                        on_click=RiskState.clear_alerts,
-                        size="1",
-                        color_scheme="gray",
-                    ),
-                ),
-                rx.vstack(
-                    rx.foreach(
-                        RiskState.alerts,
-                        lambda alert: risk_alert(alert)
-                    ),
-                    spacing="2",
-                ),
-            ),
-            width="95%",
-            margin="2rem",
-            style={
-                "background": "rgba(45, 27, 61, 0.8)",
-                "border": "1px solid #4c1d95",
-            }
-        ),
+        # Additional analytics can be added here (e.g., correlation matrix)
         
         width="100%",
     )

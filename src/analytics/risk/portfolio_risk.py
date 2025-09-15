@@ -156,30 +156,35 @@ class PortfolioRiskAnalyzer:
             'kurtosis': float(qs.stats.kurtosis(portfolio_returns))
         }
 
-        # Advanced risk metrics using Riskfolio
+        # Advanced risk metrics: compute Historical VaR/CVaR directly from returns
         risk_metrics = {}
 
-        # Calculate VaR and CVaR for each confidence level
+        def _hist_var(ret: pd.Series, alpha: float) -> float:
+            # VaR as positive loss number
+            q = np.nanquantile(ret.values, alpha)
+            return float(-q)
+
+        def _hist_cvar(ret: pd.Series, alpha: float) -> float:
+            q = np.nanquantile(ret.values, alpha)
+            tail = ret[ret <= q]
+            if len(tail) == 0:
+                return float(-q)
+            return float(-np.nanmean(tail.values))
+
         for alpha in confidence_levels:
             alpha_pct = int(alpha * 100)
-
             try:
-                # Historical VaR and CVaR
-                var_hist = float(port.var_hist(returns_data.dot(weights), alpha=alpha))
-                cvar_hist = float(port.cvar_hist(returns_data.dot(weights), alpha=alpha))
-
-                risk_metrics.update({
-                    f'var_{alpha_pct}': var_hist,
-                    f'cvar_{alpha_pct}': cvar_hist,
-                    f'expected_shortfall_{alpha_pct}': cvar_hist  # ES = CVaR
-                })
+                var_hist = _hist_var(portfolio_returns, alpha)
+                cvar_hist = _hist_cvar(portfolio_returns, alpha)
             except Exception as e:
                 logger.warning(f"Could not calculate VaR/CVaR for alpha={alpha}: {e}")
-                risk_metrics.update({
-                    f'var_{alpha_pct}': None,
-                    f'cvar_{alpha_pct}': None,
-                    f'expected_shortfall_{alpha_pct}': None
-                })
+                var_hist, cvar_hist = 0.0, 0.0
+
+            risk_metrics.update({
+                f'var_{alpha_pct}': var_hist,
+                f'cvar_{alpha_pct}': cvar_hist,
+                f'expected_shortfall_{alpha_pct}': cvar_hist
+            })
 
         # Portfolio optimization metrics
         try:
