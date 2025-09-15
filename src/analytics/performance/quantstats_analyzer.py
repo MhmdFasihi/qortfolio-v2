@@ -209,8 +209,8 @@ class QuantStatsAnalyzer:
             except:
                 metrics['expected_return'] = None
 
-            # Monthly and annual aggregations
-            monthly_returns = portfolio_returns.resample('M').apply(qs.stats.comp)
+            # Monthly and annual aggregations (avoid deprecated 'M' -> use 'ME')
+            monthly_returns = portfolio_returns.resample('ME').apply(qs.stats.comp)
             if len(monthly_returns) > 0:
                 metrics.update({
                     'monthly_return_avg': float(monthly_returns.mean()),
@@ -241,6 +241,43 @@ class QuantStatsAnalyzer:
                         })
                     except Exception as e:
                         logger.warning(f"Could not calculate benchmark metrics: {e}")
+                        # Fallback: compute core metrics manually
+                        try:
+                            import numpy as _np
+                            rp = portfolio_aligned.dropna()
+                            rb = benchmark_aligned.reindex(rp.index).dropna()
+                            common = rp.index.intersection(rb.index)
+                            rp = rp.loc[common]
+                            rb = rb.loc[common]
+                            if len(rp) > 1 and rb.var() > 0:
+                                cov = float(_np.cov(rp.values, rb.values)[0,1])
+                                var_b = float(_np.var(rb.values, ddof=1))
+                                beta = cov / var_b if var_b > 0 else 0.0
+                                alpha = float(rp.mean() - beta * rb.mean())
+                                diff = rp - rb
+                                tracking_error = float(diff.std(ddof=1)) if len(diff) > 1 else 0.0
+                                information_ratio = float(diff.mean() / tracking_error) if tracking_error != 0 else 0.0
+                                corr = float(_np.corrcoef(rp.values, rb.values)[0,1]) if len(rp) > 1 else 0.0
+                                r_squared = corr**2
+                                rf = 0.0
+                                treynor_ratio = float((rp.mean() - rf) / beta) if beta != 0 else 0.0
+                                # Capture ratios
+                                up_mask = rb > 0
+                                down_mask = rb < 0
+                                up_capture = float((rp[up_mask].mean() / (rb[up_mask].mean() or _np.nan))) if up_mask.any() else 0.0
+                                down_capture = float((rp[down_mask].mean() / (rb[down_mask].mean() or _np.nan))) if down_mask.any() else 0.0
+                                metrics.update({
+                                    'alpha': alpha,
+                                    'beta': beta,
+                                    'information_ratio': information_ratio,
+                                    'treynor_ratio': treynor_ratio,
+                                    'r_squared': r_squared,
+                                    'tracking_error': tracking_error,
+                                    'up_capture_ratio': up_capture if _np.isfinite(up_capture) else 0.0,
+                                    'down_capture_ratio': down_capture if _np.isfinite(down_capture) else 0.0
+                                })
+                        except Exception as fe:
+                            logger.warning(f"Fallback benchmark metrics failed: {fe}")
 
             return metrics
 
