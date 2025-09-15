@@ -234,3 +234,12 @@ class DatabaseConnection:
 
 # Global connection instance
 db_connection = DatabaseConnection()
+
+# Standalone convenience functions for global usage
+async def get_database_async():
+    """Get async database handle using global connection instance."""
+    return await db_connection.get_database_async()
+
+def get_database():
+    """Get sync database handle using global connection instance."""
+    return db_connection.get_database()

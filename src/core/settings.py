@@ -120,8 +120,8 @@ class Config:
         
         # Load crypto sectors configuration (import directly from module to avoid cycles)
         try:
-            from src.core.config.crypto_sectors import crypto_sectors
-            self.crypto_sectors = crypto_sectors
+            from src.core.config.crypto_sectors import CRYPTO_SECTORS
+            self.crypto_sectors = CRYPTO_SECTORS
             logger.info("✅ Crypto sectors configuration loaded")
         except ImportError as e:
             logger.error(f"❌ Failed to load crypto sectors: {e}")

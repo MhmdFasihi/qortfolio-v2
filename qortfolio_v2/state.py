@@ -561,6 +561,488 @@ class OptionsState(rx.State):
             self.last_update = datetime.now().strftime("%H:%M:%S")
 
 
+class RiskState(rx.State):
+    """Risk analytics page state with portfolio risk management"""
+
+    # UI State
+    selected_portfolio: str = "default"
+    selected_benchmark: str = "BTC"
+    loading: bool = False
+    optimization_loading: bool = False
+    auto_refresh: bool = False
+    calculation_status: str = "Ready"
+
+    # Portfolio Options
+    portfolio_options: List[str] = ["default", "conservative", "aggressive"]
+
+    # Risk Metrics
+    portfolio_value: float = 0.0
+    var_95: float = 0.0
+    var_99: float = 0.0
+    cvar_95: float = 0.0
+    max_drawdown: float = 0.0
+    sharpe_ratio: float = 0.0
+    sortino_ratio: float = 0.0
+    beta: float = 0.0
+    r_squared: float = 0.0
+
+    # Performance Metrics
+    total_return: float = 0.0
+    annual_return: float = 0.0
+    volatility: float = 0.0
+    win_rate: float = 0.0
+
+    # Chart Data
+    risk_distribution_data: List[Dict] = []
+    var_history_data: List[Dict] = []
+    correlation_matrix_data: List[Dict] = []
+    correlation_columns: List[Dict] = []
+    performance_comparison_data: List[Dict] = []
+    drawdown_data: List[Dict] = []
+    current_allocation_data: List[Dict] = []
+    suggested_allocation_data: List[Dict] = []
+    efficient_frontier_data: List[Dict] = []
+    sector_allocation_data: List[Dict] = []
+    sector_risk_data: List[Dict] = []
+
+    @rx.var
+    def portfolio_value_display(self) -> str:
+        """Formatted portfolio value"""
+        try:
+            if self.portfolio_value > 1e6:
+                return f"${self.portfolio_value/1e6:.1f}M"
+            elif self.portfolio_value > 1e3:
+                return f"${self.portfolio_value/1e3:.1f}K"
+            else:
+                return f"${self.portfolio_value:.2f}"
+        except Exception:
+            return "$0.00"
+
+    @rx.var
+    def var_95_display(self) -> str:
+        """Formatted VaR 95%"""
+        try:
+            return f"-{abs(self.var_95):.2%}"
+        except Exception:
+            return "0.00%"
+
+    @rx.var
+    def cvar_95_display(self) -> str:
+        """Formatted CVaR 95%"""
+        try:
+            return f"-{abs(self.cvar_95):.2%}"
+        except Exception:
+            return "0.00%"
+
+    @rx.var
+    def max_drawdown_display(self) -> str:
+        """Formatted max drawdown"""
+        try:
+            return f"-{abs(self.max_drawdown):.2%}"
+        except Exception:
+            return "0.00%"
+
+    @rx.var
+    def sharpe_ratio_display(self) -> str:
+        """Formatted Sharpe ratio"""
+        try:
+            return f"{self.sharpe_ratio:.2f}"
+        except Exception:
+            return "0.00"
+
+    @rx.var
+    def sortino_ratio_display(self) -> str:
+        """Formatted Sortino ratio"""
+        try:
+            return f"{self.sortino_ratio:.2f}"
+        except Exception:
+            return "0.00"
+
+    @rx.var
+    def beta_display(self) -> str:
+        """Formatted beta"""
+        try:
+            return f"{self.beta:.2f}"
+        except Exception:
+            return "0.00"
+
+    @rx.var
+    def r_squared_display(self) -> str:
+        """Formatted R-squared"""
+        try:
+            return f"{self.r_squared:.2%}"
+        except Exception:
+            return "0.00%"
+
+    @rx.var
+    def total_return_display(self) -> str:
+        """Formatted total return"""
+        try:
+            return f"{self.total_return:.2%}"
+        except Exception:
+            return "0.00%"
+
+    @rx.var
+    def annual_return_display(self) -> str:
+        """Formatted annual return"""
+        try:
+            return f"{self.annual_return:.2%}"
+        except Exception:
+            return "0.00%"
+
+    @rx.var
+    def volatility_display(self) -> str:
+        """Formatted volatility"""
+        try:
+            return f"{self.volatility:.2%}"
+        except Exception:
+            return "0.00%"
+
+    @rx.var
+    def win_rate_display(self) -> str:
+        """Formatted win rate"""
+        try:
+            return f"{self.win_rate:.1%}"
+        except Exception:
+            return "0.0%"
+
+    async def set_portfolio(self, portfolio: str):
+        """Set selected portfolio"""
+        self.selected_portfolio = portfolio
+        await self.calculate_portfolio_risk()
+
+    async def set_benchmark(self, benchmark: str):
+        """Set selected benchmark"""
+        self.selected_benchmark = benchmark
+        await self.calculate_portfolio_risk()
+
+    async def toggle_auto_refresh(self, enabled: bool):
+        """Toggle auto refresh"""
+        self.auto_refresh = enabled
+
+    async def calculate_portfolio_risk(self):
+        """Calculate comprehensive portfolio risk metrics"""
+        if self.loading:
+            return
+
+        self.loading = True
+        self.calculation_status = "Calculating..."
+
+        try:
+            # Initialize database operations and analytics modules
+            import sys
+            import os
+            # Add src to path for imports
+            sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+
+            from src.core.database.operations import DatabaseOperations
+            from src.analytics.risk.portfolio_risk import PortfolioRiskAnalyzer
+            from src.analytics.performance.quantstats_analyzer import QuantStatsAnalyzer
+            from src.core.database.connection import get_database_async
+
+            # Get database connection
+            db = await get_database_async()
+            db_ops = DatabaseOperations()
+
+            risk_analyzer = PortfolioRiskAnalyzer(db)
+            performance_analyzer = QuantStatsAnalyzer(db)
+
+            # Check if portfolio exists, create sample if not
+            portfolio_data = await db_ops.get_portfolio_data(self.selected_portfolio)
+            if not portfolio_data:
+                # Create sample portfolio data for demonstration
+                sample_portfolio = {
+                    'portfolio_id': self.selected_portfolio,
+                    'user_id': 'demo_user',
+                    'assets': ['BTC', 'ETH', 'SOL', 'AVAX'],
+                    'weights': {'BTC': 0.4, 'ETH': 0.3, 'SOL': 0.2, 'AVAX': 0.1},
+                    'total_value': 100000.0,
+                    'cash_position': 5000.0,
+                    'currency': 'USD'
+                }
+                await db_ops.store_portfolio_data(sample_portfolio)
+                self.portfolio_value = sample_portfolio['total_value']
+
+            # Calculate risk metrics
+            risk_metrics = await risk_analyzer.calculate_portfolio_metrics(
+                portfolio_id=self.selected_portfolio
+            )
+
+            if risk_metrics:
+                # Update risk metrics with correct key mapping
+                self.var_95 = risk_metrics.get('var_5', 0.0)
+                self.var_99 = risk_metrics.get('var_1', 0.0)
+                self.cvar_95 = risk_metrics.get('cvar_5', 0.0)
+                self.max_drawdown = risk_metrics.get('max_drawdown', 0.0)
+                self.sharpe_ratio = risk_metrics.get('sharpe_ratio', 0.0)
+                self.sortino_ratio = risk_metrics.get('sortino_ratio', 0.0)
+                self.beta = risk_metrics.get('beta', 1.0) or 1.0
+                self.r_squared = risk_metrics.get('r_squared', 0.0) or 0.0
+
+                # Update chart data
+                await self._update_risk_charts()
+
+            # Calculate performance metrics
+            performance_report = await performance_analyzer.generate_performance_report(
+                portfolio_id=self.selected_portfolio,
+                benchmark_symbol=self.selected_benchmark
+            )
+
+            if performance_report:
+                self.total_return = performance_report.get('total_return', 0.0)
+                self.annual_return = performance_report.get('annual_return', 0.0)
+                self.volatility = performance_report.get('annual_volatility', 0.0)
+                self.win_rate = performance_report.get('win_rate', 0.0)
+
+                # Update performance charts
+                await self._update_performance_charts()
+
+            # Generate comprehensive analytics if portfolio has data
+            if portfolio_data or risk_metrics:
+                # Calculate performance attribution
+                await self._update_attribution_analysis()
+
+                # Update sector analysis
+                await self._update_sector_analysis()
+
+            self.calculation_status = "Complete"
+
+        except Exception as e:
+            print(f"Error calculating portfolio risk: {e}")
+            self.calculation_status = f"Error: {str(e)[:20]}"
+        finally:
+            self.loading = False
+
+    async def _update_attribution_analysis(self):
+        """Update performance attribution data"""
+        try:
+            from ..src.analytics.performance.quantstats_analyzer import QuantStatsAnalyzer
+            from ..src.core.database.connection import get_database_async
+
+            db = await get_database_async()
+            performance_analyzer = QuantStatsAnalyzer(db)
+
+            # Generate sector attribution
+            sector_attribution = await performance_analyzer.generate_performance_attribution(
+                self.selected_portfolio, "sector", 252
+            )
+
+            # Update state with attribution data (simplified for demo)
+            if sector_attribution:
+                # Convert attribution data to chart format
+                attribution_chart_data = []
+                for sector, data in sector_attribution.items():
+                    if isinstance(data, dict):
+                        attribution_chart_data.append({
+                            'sector': sector,
+                            'contribution': data.get('contribution_pct', 0),
+                            'return': data.get('return', 0) * 100,
+                            'weight': data.get('weight', 0) * 100
+                        })
+
+                # Update chart data (this would populate attribution charts in UI)
+                # For now, we'll just update sector data
+                self.sector_allocation_data = attribution_chart_data[:4]  # Top 4 sectors
+
+        except Exception as e:
+            print(f"Error updating attribution analysis: {e}")
+
+    async def _update_sector_analysis(self):
+        """Update sector-based analysis"""
+        try:
+            import sys
+            import os
+            # Add src to path for imports
+            sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+
+            from src.core.config.crypto_sectors import get_portfolio_sector_allocation
+            from src.core.database.operations import DatabaseOperations
+
+            db_ops = DatabaseOperations()
+            portfolio_data = await db_ops.get_portfolio_data(self.selected_portfolio)
+
+            if portfolio_data and portfolio_data.get('weights'):
+                # Calculate sector allocation
+                sector_allocation = get_portfolio_sector_allocation(portfolio_data['weights'])
+
+                # Convert to chart data
+                self.sector_allocation_data = [
+                    {'sector': sector, 'allocation': allocation * 100}
+                    for sector, allocation in sector_allocation.items()
+                    if allocation > 0.01  # Only sectors with >1% allocation
+                ]
+
+                # Calculate sector risk (simplified)
+                sector_risk_data = []
+                for sector, allocation in sector_allocation.items():
+                    if allocation > 0.01:
+                        # Simple risk calculation based on allocation and sector type
+                        risk_multiplier = 1.5 if sector in ['DeFi', 'Gaming'] else 1.0
+                        risk_contribution = allocation * risk_multiplier * 50  # Normalized to 0-50
+                        sector_risk_data.append({
+                            'sector': sector,
+                            'risk_contribution': risk_contribution
+                        })
+
+                self.sector_risk_data = sector_risk_data
+
+        except Exception as e:
+            print(f"Error updating sector analysis: {e}")
+
+    async def optimize_portfolio(self):
+        """Optimize portfolio allocation using riskfolio-lib"""
+        if self.optimization_loading:
+            return
+
+        self.optimization_loading = True
+
+        try:
+            import sys
+            import os
+            # Add src to path for imports
+            sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+
+            from src.core.database.connection import get_database_async
+            from src.analytics.risk.portfolio_risk import PortfolioRiskAnalyzer
+
+            db = await get_database_async()
+            risk_analyzer = PortfolioRiskAnalyzer(db)
+
+            # Get current portfolio data and run optimization
+            # This would implement HRP/HERC optimization from the roadmap
+            # For now, set sample data
+            self.suggested_allocation_data = [
+                {"asset": "BTC", "weight": 0.4},
+                {"asset": "ETH", "weight": 0.3},
+                {"asset": "SOL", "weight": 0.2},
+                {"asset": "AVAX", "weight": 0.1},
+            ]
+
+            # Generate efficient frontier data
+            await self._generate_efficient_frontier()
+
+        except Exception as e:
+            print(f"Error optimizing portfolio: {e}")
+        finally:
+            self.optimization_loading = False
+
+    async def _update_risk_charts(self):
+        """Update risk-related chart data"""
+        # Sample data - in production, this would come from database
+        self.risk_distribution_data = [
+            {"risk_type": "Market Risk", "value": 60},
+            {"risk_type": "Liquidity Risk", "value": 25},
+            {"risk_type": "Concentration Risk", "value": 15},
+        ]
+
+        self.var_history_data = [
+            {"date": "2025-01-01", "var_95": -0.05, "var_99": -0.08},
+            {"date": "2025-01-02", "var_95": -0.04, "var_99": -0.07},
+            {"date": "2025-01-03", "var_95": -0.06, "var_99": -0.09},
+        ]
+
+        # Generate correlation matrix sample data
+        assets = ["BTC", "ETH", "SOL", "AVAX"]
+        self.correlation_matrix_data = []
+        self.correlation_columns = [{"name": "Asset", "id": "asset"}]
+
+        for asset in assets:
+            self.correlation_columns.append({"name": asset, "id": asset.lower()})
+
+        for i, asset1 in enumerate(assets):
+            row = {"asset": asset1}
+            for j, asset2 in enumerate(assets):
+                corr = 1.0 if i == j else 0.7 - abs(i-j) * 0.2
+                row[asset2.lower()] = f"{corr:.2f}"
+            self.correlation_matrix_data.append(row)
+
+    async def _update_performance_charts(self):
+        """Update performance-related chart data from REAL returns."""
+        try:
+            import sys
+            import os
+            sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+            from src.core.database.connection import get_database_async
+            from src.analytics.performance.quantstats_analyzer import QuantStatsAnalyzer
+            import pandas as pd
+            import numpy as np
+
+            db = await get_database_async()
+            analyzer = QuantStatsAnalyzer(db)
+
+            # Get returns series (use internal methods for consistency)
+            port_returns = await analyzer._get_portfolio_returns(self.selected_portfolio, 252)
+            bench_returns = await analyzer._get_benchmark_returns(self.selected_benchmark, 252)
+
+            if port_returns is None or len(port_returns) == 0:
+                self.performance_comparison_data = []
+                self.drawdown_data = []
+                return
+
+            # Align indexes
+            df = pd.DataFrame({'portfolio': port_returns})
+            if bench_returns is not None and len(bench_returns) > 0:
+                df['benchmark'] = bench_returns
+            else:
+                df['benchmark'] = np.nan
+            df = df.dropna(subset=['portfolio'])
+
+            # Compute cumulative NAV
+            df['portfolio_nav'] = (1.0 + df['portfolio']).cumprod()
+            if df['benchmark'].notna().any():
+                df['benchmark_nav'] = (1.0 + df['benchmark'].fillna(0)).cumprod()
+            else:
+                df['benchmark_nav'] = np.nan
+
+            # Build performance comparison data
+            self.performance_comparison_data = [
+                {
+                    'date': idx.strftime('%Y-%m-%d'),
+                    'portfolio': float(row['portfolio_nav']),
+                    'benchmark': (float(row['benchmark_nav']) if not np.isnan(row['benchmark_nav']) else None)
+                }
+                for idx, row in df[['portfolio_nav', 'benchmark_nav']].iterrows()
+            ]
+
+            # Drawdown from portfolio NAV
+            nav = df['portfolio_nav']
+            running_max = nav.cummax()
+            drawdown = (nav / running_max) - 1.0
+            self.drawdown_data = [
+                {'date': idx.strftime('%Y-%m-%d'), 'drawdown': float(val)}
+                for idx, val in drawdown.items()
+            ]
+
+        except Exception as e:
+            print(f"Error updating performance charts: {e}")
+
+    async def _generate_efficient_frontier(self):
+        """Generate efficient frontier data"""
+        # Sample efficient frontier points
+        self.efficient_frontier_data = [
+            {"risk": 0.10, "return": 0.05},
+            {"risk": 0.15, "return": 0.08},
+            {"risk": 0.20, "return": 0.12},
+            {"risk": 0.25, "return": 0.15},
+            {"risk": 0.30, "return": 0.17},
+        ]
+
+        # Sample sector data
+        self.sector_allocation_data = [
+            {"sector": "DeFi", "allocation": 40},
+            {"sector": "Infrastructure", "allocation": 35},
+            {"sector": "AI", "allocation": 15},
+            {"sector": "Gaming", "allocation": 10},
+        ]
+
+        self.sector_risk_data = [
+            {"sector": "DeFi", "risk_contribution": 45},
+            {"sector": "Infrastructure", "risk_contribution": 30},
+            {"sector": "AI", "risk_contribution": 15},
+            {"sector": "Gaming", "risk_contribution": 10},
+        ]
+
+
 class State(rx.State):
     """Main app state"""
     pass

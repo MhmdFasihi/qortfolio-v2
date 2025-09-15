@@ -4,12 +4,11 @@ import reflex as rx
 from .pages.options_analytics import options_analytics_page
 from .pages.volatility import volatility_page
 from .pages.portfolio import portfolio_page
-from .pages.risk import risk_page
+from .pages.risk_analytics import risk_analytics_page
 from .components.navigation import page_layout
-from .state import State, OptionsState
+from .state import State, OptionsState, RiskState
 from .volatility_state import VolatilityState
 from .portfolio_state import PortfolioState
-from .risk_state import RiskState
 
 def index() -> rx.Component:
     """Main dashboard page with sidebar"""
@@ -126,4 +125,4 @@ app.add_page(index, route="/", title="Qortfolio V2 Dashboard")
 app.add_page(options_analytics_page, route="/options", title="Options Analytics")
 app.add_page(volatility_page, route="/volatility", title="Volatility Analysis")
 app.add_page(portfolio_page, route="/portfolio", title="Portfolio Management", on_load=PortfolioState.fetch_portfolio_data)
-app.add_page(risk_page, route="/risk", title="Risk Dashboard")
+app.add_page(risk_analytics_page, route="/risk", title="Risk Analytics")

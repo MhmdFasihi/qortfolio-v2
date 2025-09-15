@@ -132,6 +132,105 @@ class RiskMetrics:
 
 
 @dataclass
+class PortfolioData:
+    """Portfolio configuration and allocation data model."""
+    portfolio_id: str
+    user_id: str
+    assets: List[str]
+    weights: Dict[str, float]
+    total_value: float
+    cash_position: float
+    currency: str = "USD"
+    creation_date: datetime = None
+    last_updated: datetime = None
+
+    def __post_init__(self):
+        if self.creation_date is None:
+            self.creation_date = datetime.utcnow()
+        if self.last_updated is None:
+            self.last_updated = datetime.utcnow()
+
+    def to_dict(self) -> Dict:
+        """Convert to dictionary for MongoDB."""
+        return asdict(self)
+
+
+@dataclass
+class PerformanceReport:
+    """Performance analytics report model."""
+    portfolio_id: str
+    analysis_date: datetime
+    lookback_days: int
+
+    # Basic returns
+    total_return: float
+    annual_return: float
+    annual_volatility: float
+
+    # Risk-adjusted metrics
+    sharpe_ratio: float
+    sortino_ratio: float
+    calmar_ratio: float
+    omega_ratio: float
+
+    # Risk metrics
+    max_drawdown: float
+    value_at_risk: float
+    conditional_value_at_risk: float
+
+    # Distribution metrics
+    skewness: float
+    kurtosis: float
+
+    # Win/Loss metrics
+    win_rate: float
+    profit_factor: float
+
+    # Optional fields with default values
+    benchmark_symbol: Optional[str] = None
+    information_ratio: Optional[float] = None
+    alpha: Optional[float] = None
+    beta: Optional[float] = None
+    tracking_error: Optional[float] = None
+    up_capture_ratio: Optional[float] = None
+    down_capture_ratio: Optional[float] = None
+    kelly_criterion: Optional[float] = None
+    ulcer_index: Optional[float] = None
+    recovery_factor: Optional[float] = None
+    timestamp: Optional[datetime] = None
+
+    def __post_init__(self):
+        if self.timestamp is None:
+            self.timestamp = datetime.utcnow()
+
+    def to_dict(self) -> Dict:
+        """Convert to dictionary for MongoDB."""
+        return asdict(self)
+
+
+@dataclass
+class SectorAllocation:
+    """Crypto sector allocation model."""
+    portfolio_id: str
+    sector_name: str
+    assets: List[str]
+    allocation_percentage: float
+    current_value: float
+    target_value: float
+    rebalance_needed: bool
+    last_rebalance_date: Optional[datetime] = None
+    timestamp: datetime = None
+
+    def __post_init__(self):
+        if self.timestamp is None:
+            self.timestamp = datetime.utcnow()
+
+    def to_dict(self) -> Dict:
+        """Convert to dictionary for MongoDB."""
+        return asdict(self)
+
+
+@dataclass
 class VolatilitySurfaceData:
     """Volatility surface data model."""
     currency: str
@@ -274,15 +373,49 @@ SCHEMAS = {
         "entry_date": datetime,
         "last_updated": datetime
     },
+    "portfolio_data": {
+        "portfolio_id": str,
+        "user_id": str,
+        "assets": list,
+        "weights": dict,
+        "total_value": float,
+        "cash_position": float,
+        "currency": str,
+        "creation_date": datetime,
+        "last_updated": datetime
+    },
     "risk_metrics": {
         "portfolio_id": str,
-        "var_95": float,
-        "var_99": float,
-        "cvar_95": float,
-        "sharpe_ratio": float,
-        "sortino_ratio": float,
-        "max_drawdown": float,
-        "beta": float,
+        "metrics": dict,
+        "calculated_by": str,
+        "timestamp": datetime
+    },
+    "performance_reports": {
+        "portfolio_id": str,
+        "performance_report": dict,
+        "generated_by": str,
+        "timestamp": datetime
+    },
+    "sector_risk_metrics": {
+        "portfolio_id": str,
+        "sector_allocation_risk": dict,
+        "timestamp": datetime
+    },
+    "portfolio_comparisons": {
+        "portfolio_metrics": dict,
+        "correlation_matrix": dict,
+        "comparison_date": datetime,
+        "portfolios_compared": int,
+        "lookback_days": int
+    },
+    "sector_allocations": {
+        "portfolio_id": str,
+        "sector_name": str,
+        "assets": list,
+        "allocation_percentage": float,
+        "current_value": float,
+        "target_value": float,
+        "rebalance_needed": bool,
         "timestamp": datetime
     },
     "volatility_surfaces": {
@@ -328,6 +461,25 @@ SCHEMAS = {
         "implied_volatility": float,
         "moneyness": float,
         "volume": int,
+        "timestamp": datetime
+    },
+    "performance_attribution": {
+        "portfolio_id": str,
+        "attribution_type": str,
+        "attribution_results": dict,
+        "lookback_days": int,
+        "timestamp": datetime
+    },
+    "risk_adjusted_metrics": {
+        "portfolio_id": str,
+        "risk_adjusted_metrics": dict,
+        "risk_free_rate": float,
+        "lookback_days": int,
+        "timestamp": datetime
+    },
+    "comprehensive_tearsheets": {
+        "portfolio_id": str,
+        "comprehensive_tearsheet": dict,
         "timestamp": datetime
     }
 }
