@@ -4,13 +4,12 @@
 # Contact for commercial licensing: mhmd.fasihi@gmail.com
 
 """
-Portfolio Models Package
-Pure backend business logic for portfolio operations
-All calculations happen here, no UI dependencies
+Portfolio Analytics Module
+Advanced portfolio optimization and management functionality
 """
 
-from .optimization_models import (
-    PortfolioOptimizationModel,
+from .advanced_optimizer import (
+    AdvancedPortfolioOptimizer,
     OptimizationMethod,
     OptimizationObjective,
     OptimizationConfig,
@@ -18,7 +17,7 @@ from .optimization_models import (
 )
 
 __all__ = [
-    'PortfolioOptimizationModel',
+    'AdvancedPortfolioOptimizer',
     'OptimizationMethod',
     'OptimizationObjective',
     'OptimizationConfig',

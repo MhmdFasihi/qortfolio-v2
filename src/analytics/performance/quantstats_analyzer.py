@@ -229,15 +229,17 @@ class QuantStatsAnalyzer:
                     benchmark_aligned = benchmark_returns.loc[common_dates]
 
                     try:
+                        # Use greeks function to get both alpha and beta
+                        greeks_result = qs.stats.greeks(portfolio_aligned, benchmark_aligned)
                         metrics.update({
-                            'alpha': float(qs.stats.alpha(portfolio_aligned, benchmark_aligned)),
-                            'beta': float(qs.stats.beta(portfolio_aligned, benchmark_aligned)),
+                            'alpha': float(greeks_result.get('alpha', 0.0)),
+                            'beta': float(greeks_result.get('beta', 0.0)),
                             'information_ratio': float(qs.stats.information_ratio(portfolio_aligned, benchmark_aligned)),
                             'treynor_ratio': float(qs.stats.treynor_ratio(portfolio_aligned, benchmark_aligned)),
                             'r_squared': float(qs.stats.r_squared(portfolio_aligned, benchmark_aligned)),
-                            'tracking_error': float(qs.stats.tracking_error(portfolio_aligned, benchmark_aligned)),
-                            'up_capture_ratio': float(qs.stats.capture_ratio(portfolio_aligned, benchmark_aligned, period='up')),
-                            'down_capture_ratio': float(qs.stats.capture_ratio(portfolio_aligned, benchmark_aligned, period='down'))
+                            'tracking_error': float((portfolio_aligned - benchmark_aligned).std()),
+                            'up_capture_ratio': self._calculate_capture_ratio(portfolio_aligned, benchmark_aligned, 'up'),
+                            'down_capture_ratio': self._calculate_capture_ratio(portfolio_aligned, benchmark_aligned, 'down')
                         })
                     except Exception as e:
                         logger.warning(f"Could not calculate benchmark metrics: {e}")
@@ -1189,12 +1191,15 @@ class QuantStatsAnalyzer:
                     btc_aligned = btc_returns.loc[common_dates]
 
                     try:
+                        # Use greeks function for alpha and beta
+                        greeks_result = qs.stats.greeks(portfolio_aligned, btc_aligned)
                         risk_adjusted_metrics.update({
                             'treynor_ratio': float(qs.stats.treynor_ratio(portfolio_aligned, btc_aligned)),
-                            'jensen_alpha': float(qs.stats.alpha(portfolio_aligned, btc_aligned)),
-                            'up_capture_ratio': float(qs.stats.capture_ratio(portfolio_aligned, btc_aligned, period='up')),
-                            'down_capture_ratio': float(qs.stats.capture_ratio(portfolio_aligned, btc_aligned, period='down')),
-                            'capture_ratio': float(qs.stats.capture_ratio(portfolio_aligned, btc_aligned))
+                            'jensen_alpha': float(greeks_result.get('alpha', 0.0)),
+                            'beta': float(greeks_result.get('beta', 0.0)),
+                            'up_capture_ratio': self._calculate_capture_ratio(portfolio_aligned, btc_aligned, 'up'),
+                            'down_capture_ratio': self._calculate_capture_ratio(portfolio_aligned, btc_aligned, 'down'),
+                            'capture_ratio': self._calculate_capture_ratio(portfolio_aligned, btc_aligned, 'all')
                         })
                     except Exception as e:
                         logger.warning(f"Could not calculate benchmark metrics: {e}")
@@ -1216,3 +1221,97 @@ class QuantStatsAnalyzer:
         except Exception as e:
             logger.error(f"Error calculating risk-adjusted metrics: {e}")
             return {}
+
+    def _calculate_jensen_alpha(self, portfolio_returns: pd.Series, benchmark_returns: pd.Series) -> float:
+        """
+        Calculate Jensen's Alpha manually since quantstats doesn't have alpha function
+
+        Args:
+            portfolio_returns: Portfolio returns series
+            benchmark_returns: Benchmark returns series
+
+        Returns:
+            Jensen's Alpha value
+        """
+        try:
+            import numpy as _np
+
+            if len(portfolio_returns) < 2 or len(benchmark_returns) < 2:
+                return 0.0
+
+            # Align the series
+            common_dates = portfolio_returns.index.intersection(benchmark_returns.index)
+            if len(common_dates) < 2:
+                return 0.0
+
+            rp = portfolio_returns.loc[common_dates]
+            rb = benchmark_returns.loc[common_dates]
+
+            if rb.var() == 0:
+                return 0.0
+
+            # Calculate beta
+            cov = float(_np.cov(rp.values, rb.values)[0, 1])
+            var_b = float(_np.var(rb.values, ddof=1))
+            beta = cov / var_b if var_b > 0 else 0.0
+
+            # Calculate Jensen's Alpha: α = Rp - β * Rb
+            alpha = float(rp.mean() - beta * rb.mean())
+
+            return alpha
+
+        except Exception as e:
+            logger.warning(f"Could not calculate Jensen's alpha: {e}")
+            return 0.0
+
+    def _calculate_capture_ratio(self, portfolio_returns: pd.Series, benchmark_returns: pd.Series, period: str = 'all') -> float:
+        """
+        Calculate capture ratio manually since quantstats doesn't have capture_ratio function
+
+        Args:
+            portfolio_returns: Portfolio returns series
+            benchmark_returns: Benchmark returns series
+            period: 'up', 'down', or 'all' for which periods to measure
+
+        Returns:
+            Capture ratio value
+        """
+        try:
+            if len(portfolio_returns) < 2 or len(benchmark_returns) < 2:
+                return 0.0
+
+            # Align the series
+            common_dates = portfolio_returns.index.intersection(benchmark_returns.index)
+            if len(common_dates) < 2:
+                return 0.0
+
+            portfolio = portfolio_returns.loc[common_dates]
+            benchmark = benchmark_returns.loc[common_dates]
+
+            if period == 'up':
+                # Only periods where benchmark was positive
+                mask = benchmark > 0
+            elif period == 'down':
+                # Only periods where benchmark was negative
+                mask = benchmark < 0
+            else:  # 'all'
+                # All periods
+                mask = pd.Series([True] * len(benchmark), index=benchmark.index)
+
+            if not mask.any():
+                return 0.0
+
+            portfolio_filtered = portfolio[mask]
+            benchmark_filtered = benchmark[mask]
+
+            if len(portfolio_filtered) < 2 or benchmark_filtered.mean() == 0:
+                return 0.0
+
+            # Capture ratio = average portfolio return / average benchmark return
+            capture_ratio = portfolio_filtered.mean() / benchmark_filtered.mean()
+
+            return float(capture_ratio)
+
+        except Exception as e:
+            logger.warning(f"Could not calculate capture ratio: {e}")
+            return 0.0

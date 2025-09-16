@@ -66,6 +66,16 @@ def portfolio_page() -> rx.Component:
                     PortfolioState.selected_view == "performance", "solid", "outline"
                 ),
             ),
+            rx.button(
+                "Optimization",
+                on_click=PortfolioState.set_view("optimization"),
+                color_scheme=rx.cond(
+                    PortfolioState.selected_view == "optimization", "purple", "gray"
+                ),
+                variant=rx.cond(
+                    PortfolioState.selected_view == "optimization", "solid", "outline"
+                ),
+            ),
             rx.spacer(),
             rx.text("Assets:", size="3"),
             rx.select(["all", "spot", "options"], value=PortfolioState.selected_asset_type, on_change=PortfolioState.set_asset_type),
@@ -82,7 +92,11 @@ def portfolio_page() -> rx.Component:
             rx.cond(
                 PortfolioState.selected_view == "allocation",
                 allocation_view(),
-                performance_view()
+                rx.cond(
+                    PortfolioState.selected_view == "optimization",
+                    optimization_view(),
+                    performance_view()
+                )
             )
         ),
         
@@ -214,6 +228,167 @@ def performance_view() -> rx.Component:
             margin="1rem 2rem 2rem 2rem",
             style={"background": "rgba(45, 27, 61, 0.8)", "border": "1px solid #4c1d95"},
         ),
+    )
+
+def optimization_view() -> rx.Component:
+    """Advanced portfolio optimization view with HRP, HERC, and Mean-Variance"""
+    return rx.vstack(
+        # Optimization Controls
+        rx.card(
+            rx.vstack(
+                rx.hstack(
+                    rx.heading("Portfolio Optimization", size="5"),
+                    rx.spacer(),
+                    rx.text("Status:", size="3", color="#9ca3af"),
+                    rx.text(PortfolioState.optimization_status, size="3", weight="bold", color="#a855f7"),
+                    width="100%",
+                ),
+
+                rx.grid(
+                    rx.vstack(
+                        rx.text("Optimization Method", size="3", weight="bold"),
+                        rx.select(
+                            PortfolioState.optimization_methods,
+                            value=PortfolioState.optimization_method,
+                            on_change=PortfolioState.set_optimization_method,
+                        ),
+                        spacing="2",
+                    ),
+                    rx.vstack(
+                        rx.text("Risk-Free Rate", size="3", weight="bold"),
+                        rx.input(
+                            value=PortfolioState.risk_free_rate,
+                            on_change=PortfolioState.set_optimization_parameter("risk_free_rate", rx.event_value),
+                            type="number",
+                            placeholder="0.05",
+                        ),
+                        spacing="2",
+                    ),
+                    rx.vstack(
+                        rx.text("Lookback Days", size="3", weight="bold"),
+                        rx.input(
+                            value=PortfolioState.lookback_days,
+                            on_change=PortfolioState.set_optimization_parameter("lookback_days", rx.event_value),
+                            type="number",
+                            placeholder="252",
+                        ),
+                        spacing="2",
+                    ),
+                    rx.vstack(
+                        rx.hstack(
+                            rx.button(
+                                "Optimize Portfolio",
+                                on_click=PortfolioState.run_portfolio_optimization,
+                                loading=PortfolioState.optimization_loading,
+                                color_scheme="purple",
+                                size="3",
+                            ),
+                            rx.button(
+                                "Compare Methods",
+                                on_click=PortfolioState.run_multi_method_comparison,
+                                loading=PortfolioState.optimization_loading,
+                                color_scheme="green",
+                                size="3",
+                            ),
+                            spacing="3",
+                        ),
+                        spacing="2",
+                    ),
+                    columns="4",
+                    spacing="4",
+                    width="100%",
+                ),
+                spacing="4",
+            ),
+            width="95%",
+            margin="0 2rem",
+            style={"background": "rgba(45, 27, 61, 0.8)", "border": "1px solid #4c1d95"},
+        ),
+
+        # Optimization Results
+        rx.grid(
+            # Current Allocation vs Suggested
+            rx.card(
+                rx.vstack(
+                    rx.heading("Current vs Suggested Allocation", size="5"),
+                    rx.cond(
+                        PortfolioState.suggested_allocation,
+                        rx.vstack(
+                            rx.text("Suggested Allocation", size="4", weight="bold", color="#22c55e"),
+                            rx.data_table(
+                                data=PortfolioState.suggested_allocation,
+                                columns=[
+                                    {"Header": "Asset", "accessor": "asset"},
+                                    {"Header": "Weight %", "accessor": "weight"}
+                                ],
+                                pagination=False,
+                            ),
+                            spacing="3",
+                        ),
+                        rx.text("Run optimization to see suggested allocation", color="#9ca3af"),
+                    ),
+                ),
+                style={"background": "rgba(45, 27, 61, 0.8)", "border": "1px solid #4c1d95"},
+            ),
+
+            # Optimization Comparison
+            rx.card(
+                rx.vstack(
+                    rx.heading("Method Comparison", size="5"),
+                    rx.cond(
+                        PortfolioState.optimization_comparison,
+                        rx.data_table(
+                            data=PortfolioState.optimization_comparison,
+                            columns=[
+                                {"Header": "Method", "accessor": "method"},
+                                {"Header": "Expected Return", "accessor": "expected_return"},
+                                {"Header": "Volatility", "accessor": "volatility"},
+                                {"Header": "Sharpe Ratio", "accessor": "sharpe_ratio"},
+                                {"Header": "Time (s)", "accessor": "optimization_time"}
+                            ],
+                            pagination=False,
+                        ),
+                        rx.text("Run method comparison to see results", color="#9ca3af"),
+                    ),
+                ),
+                style={"background": "rgba(45, 27, 61, 0.8)", "border": "1px solid #4c1d95"},
+            ),
+
+            columns="2",
+            spacing="4",
+            width="95%",
+            margin="1rem 2rem",
+        ),
+
+        # Efficient Frontier Chart
+        rx.cond(
+            PortfolioState.efficient_frontier_data,
+            rx.card(
+                rx.vstack(
+                    rx.heading("Efficient Frontier", size="5"),
+                    rx.recharts.scatter_chart(
+                        rx.recharts.scatter(
+                            data=PortfolioState.efficient_frontier_data,
+                            data_key="return",
+                            fill="#a855f7",
+                        ),
+                        rx.recharts.x_axis(data_key="risk", name="Risk (Volatility)"),
+                        rx.recharts.y_axis(data_key="return", name="Return"),
+                        rx.recharts.cartesian_grid(stroke_dasharray="3 3"),
+                        rx.recharts.tooltip(),
+                        height=400,
+                        width="100%",
+                    ),
+                ),
+                width="95%",
+                margin="1rem 2rem 2rem 2rem",
+                style={"background": "rgba(45, 27, 61, 0.8)", "border": "1px solid #4c1d95"},
+            ),
+            rx.box(),  # Empty box when no frontier data
+        ),
+
+        spacing="4",
+        width="100%",
     )
 
 def perf_metric(label: str, value: str) -> rx.Component:
