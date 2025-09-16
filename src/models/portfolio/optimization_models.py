@@ -45,7 +45,7 @@ class OptimizationConfig:
     risk_measure: str = "MV"
     risk_free_rate: float = 0.05
     risk_aversion: float = 2.0
-    lookback_days: int = 252
+    lookback_days: int = 365
 
     # HRP/HERC specific
     codependence: str = "pearson"
@@ -344,8 +344,8 @@ class PortfolioOptimizationModel:
             )
 
             # Calculate metrics
-            portfolio_return = (returns_data.mean() @ optimal_weights).iloc[0] * 252
-            portfolio_vol = np.sqrt(optimal_weights.T @ returns_data.cov() @ optimal_weights).iloc[0] * np.sqrt(252)
+            portfolio_return = (returns_data.mean() @ optimal_weights).iloc[0] * 365
+            portfolio_vol = np.sqrt(optimal_weights.T @ returns_data.cov() @ optimal_weights).iloc[0] * np.sqrt(365)
             sharpe_ratio = (portfolio_return - config.risk_free_rate) / portfolio_vol
 
             # Calculate sector allocation
@@ -442,8 +442,8 @@ class PortfolioOptimizationModel:
             )
 
             # Calculate metrics
-            portfolio_return = (portfolio.mu @ optimal_weights).iloc[0] * 252
-            portfolio_vol = np.sqrt(optimal_weights.T @ portfolio.cov @ optimal_weights).iloc[0] * np.sqrt(252)
+            portfolio_return = (portfolio.mu @ optimal_weights).iloc[0] * 365
+            portfolio_vol = np.sqrt(optimal_weights.T @ portfolio.cov @ optimal_weights).iloc[0] * np.sqrt(365)
             sharpe_ratio = (portfolio_return - config.risk_free_rate) / portfolio_vol
 
             # Calculate sector allocation

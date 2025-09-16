@@ -48,7 +48,7 @@ class OptimizationConfig:
     risk_measure: str = "MV"  # Mean-Variance
     risk_free_rate: float = 0.05
     risk_aversion: float = 2.0
-    lookback_days: int = 252
+    lookback_days: int = 365
     rebalance_frequency: str = "monthly"  # daily, weekly, monthly
 
     # HRP/HERC specific
@@ -409,8 +409,8 @@ class AdvancedPortfolioOptimizer:
             )
 
             # Calculate performance metrics
-            portfolio_return = (self.returns_data.mean() @ optimal_weights).iloc[0] * 252
-            portfolio_vol = np.sqrt(optimal_weights.T @ self.returns_data.cov() @ optimal_weights).iloc[0] * np.sqrt(252)
+            portfolio_return = (self.returns_data.mean() @ optimal_weights).iloc[0] * 365
+            portfolio_vol = np.sqrt(optimal_weights.T @ self.returns_data.cov() @ optimal_weights).iloc[0] * np.sqrt(365)
             sharpe_ratio = (portfolio_return - self.config.risk_free_rate) / portfolio_vol
 
             # Calculate sector allocation
@@ -496,8 +496,8 @@ class AdvancedPortfolioOptimizer:
             )
 
             # Calculate performance metrics
-            portfolio_return = (self.portfolio.mu @ optimal_weights).iloc[0] * 252
-            portfolio_vol = np.sqrt(optimal_weights.T @ self.portfolio.cov @ optimal_weights).iloc[0] * np.sqrt(252)
+            portfolio_return = (self.portfolio.mu @ optimal_weights).iloc[0] * 365
+            portfolio_vol = np.sqrt(optimal_weights.T @ self.portfolio.cov @ optimal_weights).iloc[0] * np.sqrt(365)
             sharpe_ratio = (portfolio_return - self.config.risk_free_rate) / portfolio_vol
 
             # Calculate sector allocation

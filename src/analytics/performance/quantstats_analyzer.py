@@ -40,7 +40,7 @@ class QuantStatsAnalyzer:
         self,
         portfolio_id: str,
         benchmark_symbol: str = "BTC",
-        lookback_days: int = 252,
+        lookback_days: int = 365,
         include_tearsheet: bool = False
     ) -> Dict:
         """
@@ -156,7 +156,7 @@ class QuantStatsAnalyzer:
                 'total_return': float(qs.stats.comp(portfolio_returns)),
                 'annual_return': float(qs.stats.cagr(portfolio_returns)),
                 'annual_volatility': float(qs.stats.volatility(portfolio_returns)),
-                'annualized_return': float(qs.stats.cagr(portfolio_returns, periods=252)),
+                'annualized_return': float(qs.stats.cagr(portfolio_returns, periods=365)),
 
                 # Risk metrics
                 'sharpe_ratio': float(qs.stats.sharpe(portfolio_returns)),
@@ -492,7 +492,7 @@ class QuantStatsAnalyzer:
         benchmark_symbol: str = "BTC",
         include_attribution: bool = True,
         include_sector_analysis: bool = True,
-        lookback_days: int = 252
+        lookback_days: int = 365
     ) -> Dict:
         """
         Generate comprehensive tearsheet with advanced analytics
@@ -755,7 +755,7 @@ class QuantStatsAnalyzer:
     async def compare_portfolios(
         self,
         portfolio_ids: List[str],
-        lookback_days: int = 252
+        lookback_days: int = 365
     ) -> Dict:
         """
         Compare performance metrics across multiple portfolios
@@ -811,7 +811,7 @@ class QuantStatsAnalyzer:
         self,
         portfolio_id: str,
         attribution_type: str = "sector",
-        lookback_days: int = 252
+        lookback_days: int = 365
     ) -> Dict:
         """
         Generate performance attribution analysis
@@ -922,7 +922,7 @@ class QuantStatsAnalyzer:
                         'contribution': float(sector_contribution),
                         'contribution_pct': float(sector_contribution / total_portfolio_return * 100) if total_portfolio_return != 0 else 0,
                         'assets': sector_assets,
-                        'volatility': float(sector_returns.std() * np.sqrt(252)) if len(sector_returns) > 1 else 0,
+                        'volatility': float(sector_returns.std() * np.sqrt(365)) if len(sector_returns) > 1 else 0,
                         'sharpe_ratio': float(qs.stats.sharpe(sector_returns)) if len(sector_returns) > 1 else 0
                     }
 
@@ -961,7 +961,7 @@ class QuantStatsAnalyzer:
                     'return': float(asset_total_return),
                     'contribution': float(asset_contribution),
                     'contribution_pct': float(asset_contribution / total_portfolio_return * 100) if total_portfolio_return != 0 else 0,
-                    'volatility': float(asset_returns.std() * np.sqrt(252)),
+                    'volatility': float(asset_returns.std() * np.sqrt(365)),
                     'sharpe_ratio': float(qs.stats.sharpe(asset_returns)),
                     'max_drawdown': float(qs.stats.max_drawdown(asset_returns)),
                     'beta': await self._calculate_asset_beta(asset, lookback_days)
@@ -1130,7 +1130,7 @@ class QuantStatsAnalyzer:
         self,
         portfolio_id: str,
         risk_free_rate: float = 0.05,
-        lookback_days: int = 252
+        lookback_days: int = 365
     ) -> Dict:
         """
         Generate comprehensive risk-adjusted performance metrics
@@ -1157,8 +1157,8 @@ class QuantStatsAnalyzer:
                 'jensen_alpha': 0.0,   # Will calculate if benchmark available
 
                 # Downside risk metrics
-                'downside_deviation': float(qs.stats.volatility(portfolio_returns[portfolio_returns < 0]) * np.sqrt(252)),
-                'upside_deviation': float(qs.stats.volatility(portfolio_returns[portfolio_returns > 0]) * np.sqrt(252)),
+                'downside_deviation': float(qs.stats.volatility(portfolio_returns[portfolio_returns < 0]) * np.sqrt(365)),
+                'upside_deviation': float(qs.stats.volatility(portfolio_returns[portfolio_returns > 0]) * np.sqrt(365)),
                 'capture_ratio': 0.0,  # Will calculate if benchmark available
 
                 # Advanced risk metrics

@@ -62,7 +62,7 @@ class PortfolioRiskAnalyzer:
     async def calculate_portfolio_metrics(
         self,
         portfolio_id: str,
-        lookback_days: int = 252,
+        lookback_days: int = 365,
         confidence_levels: List[float] = [0.05, 0.01]
     ) -> Dict:
         """
@@ -398,7 +398,7 @@ class PortfolioRiskAnalyzer:
                     continue
 
                 # Calculate returns for sector assets
-                sector_returns = await self._get_returns_data(portfolio_sector_assets, 252)
+                sector_returns = await self._get_returns_data(portfolio_sector_assets, 365)
 
                 if sector_returns.empty:
                     continue
@@ -440,7 +440,7 @@ class PortfolioRiskAnalyzer:
         self,
         portfolio_id: str,
         simulation_config: SimulationConfig = None,
-        lookback_days: int = 252
+        lookback_days: int = 365
     ) -> Dict:
         """
         Run comprehensive Monte Carlo risk analysis
@@ -509,7 +509,7 @@ class PortfolioRiskAnalyzer:
         self,
         portfolio_id: str,
         estimation_method: str = "ledoit_wolf",
-        lookback_days: int = 252
+        lookback_days: int = 365
     ) -> Dict:
         """
         Perform comprehensive correlation structure analysis
@@ -772,7 +772,7 @@ class PortfolioRiskAnalyzer:
         include_monte_carlo: bool = True,
         include_backtesting: bool = True,
         include_correlation_analysis: bool = True,
-        lookback_days: int = 252
+        lookback_days: int = 365
     ) -> Dict:
         """
         Generate comprehensive risk analysis report

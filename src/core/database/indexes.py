@@ -279,7 +279,7 @@ PERFORMANCE_QUERIES = {
         "collection": "price_data",
         "query": {"symbol": "BTC"},
         "sort": [("timestamp", -1)],
-        "limit": 252
+        "limit": 365
     },
     "portfolio_performance_lookup": {
         "collection": "performance_reports",

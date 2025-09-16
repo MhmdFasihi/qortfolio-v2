@@ -383,7 +383,7 @@ class RiskMonitor:
 class RegimeDetector:
     """Detects regime changes in market conditions"""
 
-    def __init__(self, lookback_window: int = 252):
+    def __init__(self, lookback_window: int = 365):
         self.lookback_window = lookback_window
 
     def detect_volatility_regime_change(self,
@@ -403,7 +403,7 @@ class RegimeDetector:
             return {"regime_change": False, "reason": "Insufficient data"}
 
         # Calculate rolling volatility
-        rolling_vol = returns.rolling(window=21).std() * np.sqrt(252)  # Annualized
+        rolling_vol = returns.rolling(window=21).std() * np.sqrt(365)  # Annualized
 
         # Historical volatility statistics
         hist_vol_mean = rolling_vol.mean()

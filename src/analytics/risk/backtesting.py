@@ -38,7 +38,7 @@ class BacktestResults:
 class BacktestConfig:
     """Configuration for backtesting"""
     confidence_level: float = 0.95
-    lookback_window: int = 252
+    lookback_window: int = 365
     rebalance_frequency: int = 1  # days
     min_observations: int = 100
     test_types: List[str] = None

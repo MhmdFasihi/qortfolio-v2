@@ -13,7 +13,7 @@ def portfolio_page() -> rx.Component:
             rx.spacer(),
             rx.button(
                 "Refresh",
-                on_click=PortfolioState.fetch_portfolio_data,
+                on_click=PortfolioState.refresh,
                 loading=PortfolioState.loading,
                 color_scheme="purple",
                 size="3",
@@ -34,6 +34,21 @@ def portfolio_page() -> rx.Component:
             padding="0 2rem",
         ),
         
+        # Portfolio Selector / Create / Delete / Benchmark
+        rx.hstack(
+            rx.text("Portfolio:", size="3"),
+            rx.select(PortfolioState.portfolio_options, value=PortfolioState.selected_portfolio, on_change=PortfolioState.set_portfolio),
+            rx.input(placeholder="New portfolio", value=PortfolioState.new_portfolio_name, on_change=lambda v: setattr(PortfolioState, 'new_portfolio_name', v), width="200px"),
+            rx.button("Create", on_click=PortfolioState.create_portfolio, size="2", color_scheme="green"),
+            rx.button("Delete", on_click=lambda: PortfolioState.delete_portfolio(PortfolioState.selected_portfolio), size="2", color_scheme="red"),
+            rx.spacer(),
+            rx.text("Benchmark:", size="3"),
+            rx.select(PortfolioState.benchmark_options, value=PortfolioState.selected_benchmark, on_change=PortfolioState.set_benchmark),
+            spacing="3",
+            padding="0 2rem",
+            width="100%",
+        ),
+
         # View Selector & Filters
         rx.hstack(
             rx.button(
@@ -124,6 +139,14 @@ def positions_view() -> rx.Component:
     return rx.card(
         rx.vstack(
             rx.heading("Current Positions", size="5"),
+            rx.hstack(
+                rx.input(placeholder="Symbol (e.g., BTC)", value=PortfolioState.trade_symbol, on_change=PortfolioState.set_trade_symbol, width="160px"),
+                rx.input(placeholder="Quantity", type="number", value=PortfolioState.trade_quantity, on_change=PortfolioState.set_trade_quantity, width="120px"),
+                rx.input(placeholder="Price (optional)", type="number", value=PortfolioState.trade_price, on_change=PortfolioState.set_trade_price, width="160px"),
+                rx.select(["buy", "sell"], value=PortfolioState.trade_side, on_change=PortfolioState.set_trade_side, width="120px"),
+                rx.button("Submit", on_click=PortfolioState.add_spot_position, color_scheme="purple"),
+                spacing="2",
+            ),
             rx.data_table(
                 data=PortfolioState.positions,
                 columns=[
@@ -135,7 +158,6 @@ def positions_view() -> rx.Component:
                     {"name": "Value", "id": "value"},
                     {"name": "P&L", "id": "pnl"},
                     {"name": "P&L %", "id": "pnl_percent"},
-                    {"name": "Allocation %", "id": "allocation"},
                 ],
             ),
         ),
@@ -184,7 +206,24 @@ def allocation_view() -> rx.Component:
             ),
             style={"background": "rgba(45, 27, 61, 0.8)", "border": "1px solid #4c1d95"},
         ),
-        columns="2",
+        rx.card(
+            rx.vstack(
+                rx.heading("Sector P&L Contribution", size="5"),
+                rx.recharts.bar_chart(
+                    rx.recharts.bar(
+                        data_key="pnl",
+                        fill="#22c55e",
+                    ),
+                    rx.recharts.x_axis(data_key="sector"),
+                    rx.recharts.y_axis(),
+                    rx.recharts.tooltip(),
+                    data=PortfolioState.sector_risk_contribution,
+                    height=300,
+                ),
+            ),
+            style={"background": "rgba(45, 27, 61, 0.8)", "border": "1px solid #4c1d95"},
+        ),
+        columns="3",
         spacing="4",
         width="95%",
         margin="0 2rem",
@@ -211,11 +250,11 @@ def performance_view() -> rx.Component:
         ),
         rx.card(
             rx.vstack(
-                rx.heading("Portfolio vs BTC", size="5"),
+                rx.heading("Portfolio vs Benchmark", size="5"),
                 rx.recharts.line_chart(
                     rx.recharts.cartesian_grid(stroke_dasharray="3 3"),
                     rx.recharts.line(data_key="portfolio_pct", stroke="#a855f7", name="Portfolio (%)", dot=False),
-                    rx.recharts.line(data_key="btc_pct", stroke="#22d3ee", name="BTC (%)", dot=False),
+                    rx.recharts.line(data_key="benchmark_pct", stroke="#22d3ee", name="Benchmark (%)", dot=False),
                     rx.recharts.x_axis(data_key="date"),
                     rx.recharts.y_axis(),
                     rx.recharts.tooltip(),
@@ -258,7 +297,7 @@ def optimization_view() -> rx.Component:
                         rx.text("Risk-Free Rate", size="3", weight="bold"),
                         rx.input(
                             value=PortfolioState.risk_free_rate,
-                            on_change=PortfolioState.set_optimization_parameter("risk_free_rate", rx.event_value),
+                            on_change=lambda v: PortfolioState.set_optimization_parameter("risk_free_rate", v),
                             type="number",
                             placeholder="0.05",
                         ),
@@ -268,9 +307,9 @@ def optimization_view() -> rx.Component:
                         rx.text("Lookback Days", size="3", weight="bold"),
                         rx.input(
                             value=PortfolioState.lookback_days,
-                            on_change=PortfolioState.set_optimization_parameter("lookback_days", rx.event_value),
+                            on_change=lambda v: PortfolioState.set_optimization_parameter("lookback_days", v),
                             type="number",
-                            placeholder="252",
+                            placeholder="365",
                         ),
                         spacing="2",
                     ),
@@ -371,6 +410,13 @@ def optimization_view() -> rx.Component:
                             data=PortfolioState.efficient_frontier_data,
                             data_key="return",
                             fill="#a855f7",
+                            name="Frontier",
+                        ),
+                        rx.recharts.scatter(
+                            data=[PortfolioState.current_portfolio_point],
+                            data_key="return",
+                            fill="#22c55e",
+                            name="Current Portfolio",
                         ),
                         rx.recharts.x_axis(data_key="risk", name="Risk (Volatility)"),
                         rx.recharts.y_axis(data_key="return", name="Return"),

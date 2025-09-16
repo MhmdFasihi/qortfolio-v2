@@ -33,6 +33,7 @@ class PortfolioState(rx.State):
     # Allocations
     crypto_allocation: List[Dict] = []
     sector_allocation: List[Dict] = []
+    sector_risk_contribution: List[Dict] = []
 
     # Performance time series
     portfolio_vs_btc: List[Dict] = []  # {date, portfolio_pct, btc_pct}
@@ -48,6 +49,21 @@ class PortfolioState(rx.State):
     selected_view: str = "positions"  # positions, allocation, performance
     selected_asset_type: str = "all"   # all, spot, options
     selected_period: str = "30d"       # 7d, 30d, 90d, 1y
+
+    # Portfolios
+    portfolio_options: List[str] = ["default"]
+    selected_portfolio: str = "default"
+    new_portfolio_name: str = ""
+
+    # Benchmarks
+    benchmark_options: List[str] = ["BTC-USD", "ETH-USD", "SPY", "GC=F"]
+    selected_benchmark: str = "BTC-USD"
+
+    # Trade inputs
+    trade_symbol: str = "BTC"
+    trade_quantity: float = 0.0
+    trade_price: float = 0.0
+    trade_side: str = "buy"  # buy or sell
 
     @rx.var
     def total_value_display(self) -> str:
@@ -78,6 +94,117 @@ class PortfolioState(rx.State):
         self.selected_period = period
         return PortfolioState.fetch_portfolio_data()
 
+    async def refresh(self):
+        await self.load_portfolios()
+        await self.fetch_portfolio_data()
+
+    def set_portfolio(self, portfolio_id: str):
+        self.selected_portfolio = portfolio_id
+        return PortfolioState.fetch_portfolio_data()
+
+    def set_benchmark(self, bench: str):
+        self.selected_benchmark = bench
+        return PortfolioState.fetch_portfolio_data()
+
+    def set_trade_symbol(self, sym: str):
+        self.trade_symbol = sym
+
+    def set_trade_quantity(self, qty):
+        try:
+            self.trade_quantity = float(qty)
+        except Exception:
+            self.trade_quantity = 0.0
+
+    def set_trade_price(self, px):
+        try:
+            self.trade_price = float(px)
+        except Exception:
+            self.trade_price = 0.0
+
+    def set_trade_side(self, side: str):
+        self.trade_side = side
+
+    async def load_portfolios(self):
+        """Load list of available portfolios from DB."""
+        try:
+            from src.core.database.operations import DatabaseOperations
+            ops = DatabaseOperations()
+            portfolios = await ops.get_portfolio_list()
+            ids = [p.get('portfolio_id') for p in portfolios if p.get('portfolio_id')]
+            self.portfolio_options = ids or ["default"]
+            if self.selected_portfolio not in self.portfolio_options:
+                self.selected_portfolio = self.portfolio_options[0]
+        except Exception:
+            self.portfolio_options = ["default"]
+
+    async def create_portfolio(self):
+        """Create a new named portfolio and persist to DB."""
+        name = (self.new_portfolio_name or '').strip() or 'portfolio'
+        try:
+            from src.core.database.operations import DatabaseOperations
+            ops = DatabaseOperations()
+            doc = {
+                'portfolio_id': name,
+                'user_id': 'local',
+                'assets': [],
+                'weights': {},
+                'total_value': 0.0,
+                'cash_position': 0.0,
+                'currency': 'USD'
+            }
+            await ops.store_portfolio_data(doc)
+            self.selected_portfolio = name
+            await self.load_portfolios()
+        except Exception as e:
+            print(f"Create portfolio failed: {e}")
+
+    async def delete_portfolio(self, portfolio_id: str):
+        """Delete portfolio and its positions."""
+        try:
+            from src.core.database.connection import db_connection
+            adb = await db_connection.get_database_async()
+            await adb.portfolio_data.delete_many({'portfolio_id': portfolio_id})
+            await adb.portfolio_positions.delete_many({'portfolio_id': portfolio_id})
+            await self.load_portfolios()
+            self.selected_portfolio = self.portfolio_options[0]
+            await self.fetch_portfolio_data()
+        except Exception as e:
+            print(f"Delete portfolio failed: {e}")
+
+    async def add_spot_position(self):
+        """Add or update a spot position using yfinance price if price not provided."""
+        try:
+            sym = (self.trade_symbol or '').upper()
+            qty = float(self.trade_quantity or 0)
+            px = float(self.trade_price or 0)
+            if qty == 0:
+                return
+            # Fetch current price if not provided
+            if px <= 0:
+                from src.data.providers.yfinance_provider import YFinanceProvider
+                yf = YFinanceProvider()
+                # Map to Yahoo symbol if pure crypto ticker given
+                price_data = yf.get_current_price(sym) or yf.get_current_price(f"{sym}-USD")
+                if price_data:
+                    px = float(price_data.get('price_usd') or 0)
+
+            from src.core.database.connection import db_connection
+            adb = await db_connection.get_database_async()
+            side = (self.trade_side or 'buy').lower()
+            signed_qty = qty if side == 'buy' else -qty
+            await adb.portfolio_positions.insert_one({
+                'portfolio_id': self.selected_portfolio,
+                'symbol': sym,
+                'type': 'Spot',
+                'quantity': signed_qty,
+                'entry_price': px,
+                'current_price': px,
+                'timestamp': datetime.utcnow()
+            })
+            await self.fetch_portfolio_data()
+        except Exception as e:
+            print(f"Add spot position failed: {e}")
+
     async def fetch_portfolio_data(self):
         """Fetch portfolio data from MongoDB and compute metrics/series."""
         self.loading = True
@@ -85,8 +212,8 @@ class PortfolioState(rx.State):
             from src.core.database.connection import db_connection
             db = await db_connection.get_database_async()
 
-            # Fetch positions
-            cursor = db.portfolio_positions.find({})
+            # Fetch positions for selected portfolio
+            cursor = db.portfolio_positions.find({'portfolio_id': self.selected_portfolio})
             positions = await cursor.to_list(length=None)
             if not positions:
                 # Fallback sample if no positions saved
@@ -104,9 +231,21 @@ class PortfolioState(rx.State):
             vals = []
             total_value = 0.0
             total_cost = 0.0
+            # Aggregate by symbol for simple net position
+            by_sym: Dict[str, Dict] = {}
             for p in positions:
+                sym = p.get("symbol", "")
+                if sym not in by_sym:
+                    by_sym[sym] = {"symbol": sym, "type": p.get("type", "Spot"), "quantity": 0.0, "cost": 0.0, "entry_price": 0.0, "current_price": float(p.get("current_price", 0) or 0)}
                 qty = float(p.get("quantity", 0) or 0)
-                entry = float(p.get("entry_price", 0) or 0)
+                px = float(p.get("entry_price", 0) or 0)
+                by_sym[sym]["quantity"] += qty
+                by_sym[sym]["cost"] += qty * px
+                by_sym[sym]["current_price"] = float(p.get("current_price", by_sym[sym]["current_price"]) or by_sym[sym]["current_price"])
+
+            for p in by_sym.values():
+                qty = float(p.get("quantity", 0) or 0)
+                entry = float(p.get("cost", 0) / qty) if qty != 0 else float(p.get("entry_price", 0) or 0)
                 current = float(p.get("current_price", entry) or entry)
                 value = qty * current if p.get("type", "").lower().startswith("spot") else float(p.get("value", 0) or 0)
                 pnl = qty * (current - entry) if p.get("type", "").lower().startswith("spot") else float(p.get("pnl", 0) or 0)
@@ -128,9 +267,39 @@ class PortfolioState(rx.State):
             for v in vals:
                 sym = v["symbol"]
                 crypto_alloc[sym] = crypto_alloc.get(sym, 0.0) + v["value"]
+            # Include USDT cash from portfolio_data if any
+            try:
+                from src.core.database.operations import DatabaseOperations
+                ops = DatabaseOperations()
+                pdata = await ops.get_portfolio_data(self.selected_portfolio)
+                cash = float(pdata.get('cash_position', 0) or 0) if pdata else 0.0
+                if cash > 0:
+                    crypto_alloc['USDT'] = crypto_alloc.get('USDT', 0.0) + cash
+                    total_value = total_value + cash
+            except Exception:
+                pass
             self.crypto_allocation = [
                 {"name": k, "value": round((v/total_value)*100.0, 2)} for k, v in crypto_alloc.items() if total_value > 0
             ]
+
+            # Sector allocation and contributions
+            try:
+                from src.core.config.crypto_sectors import get_asset_sector
+                sector_val: Dict[str, float] = {}
+                sector_pnl: Dict[str, float] = {}
+                for r in vals:
+                    sec = get_asset_sector(r['symbol'])
+                    sector_val[sec] = sector_val.get(sec, 0.0) + float(r['value'] or 0)
+                    sector_pnl[sec] = sector_pnl.get(sec, 0.0) + float(r['pnl'] or 0)
+                self.sector_allocation = [
+                    {"name": s, "value": round((val/total_value)*100.0, 2)} for s, val in sector_val.items() if total_value > 0
+                ]
+                # Optional: could store sector risk/pnl contribution for enhanced charts
+                self.sector_risk_contribution = [
+                    {"sector": s, "pnl": round(sector_pnl.get(s, 0.0), 2)} for s in sector_val.keys()
+                ]
+            except Exception:
+                self.sector_allocation = []
 
             # Save positions and totals
             self.positions = vals
@@ -175,6 +344,7 @@ class PortfolioState(rx.State):
             if dates:
                 base_prices = {sym: get_price(sym, dates[0]) for sym in spot_symbols}
                 portfolio_series = []
+                nav_values = []
                 for d in dates:
                     idx = 0.0
                     for sym in spot_symbols:
@@ -183,26 +353,60 @@ class PortfolioState(rx.State):
                         if p0 > 0 and pt > 0:
                             idx += weights.get(sym, 0.0) * (pt / p0)
                     portfolio_series.append({"date": d, "portfolio_pct": round((idx-1.0)*100.0, 2)})
+                    nav_values.append(idx)
             else:
                 portfolio_series = []
+                nav_values = []
 
-            # BTC benchmark
-            btc_cur = db.price_data.find({"symbol": "BTC", "timestamp": {"$gte": start}}).sort("timestamp", 1)
-            btc_rows = await btc_cur.to_list(length=None)
-            btc_series = []
-            if btc_rows:
-                base = float(btc_rows[0].get("close", 0) or 0)
-                for r in btc_rows:
+            # Benchmark series (from selected_benchmark)
+            bench_symbol = self.selected_benchmark
+            bench_cur = db.price_data.find({"symbol": bench_symbol, "timestamp": {"$gte": start}}).sort("timestamp", 1)
+            bench_rows = await bench_cur.to_list(length=None)
+            # Backfill via yfinance if empty
+            if len(bench_rows) < 2:
+                try:
+                    from src.data.providers.yfinance_provider import YFinanceProvider
+                    yfp = YFinanceProvider()
+                    hist = yfp.get_historical_data(bench_symbol, period=f"{days}d", interval="1d")
+                    if not hist.empty:
+                        # Store to DB
+                        docs = []
+                        for _, row in hist.iterrows():
+                            ts = row['timestamp'] if 'timestamp' in row else _
+                            docs.append({'symbol': bench_symbol, 'timestamp': ts.to_pydatetime() if hasattr(ts, 'to_pydatetime') else ts, 'close': float(row.get('close', row.get('price_usd', 0)) or 0)})
+                        if docs:
+                            await db.price_data.insert_many(docs)
+                        bench_rows = await bench_cur.to_list(length=None)
+                except Exception:
+                    pass
+            bench_series = []
+            if bench_rows:
+                base = float(bench_rows[0].get("close", 0) or 0)
+                for r in bench_rows:
                     if base > 0 and r.get("close"):
-                        btc_series.append({"date": r["timestamp"].strftime("%Y-%m-%d"), "btc_pct": round(((float(r["close"]) / base) - 1.0)*100.0, 2)})
+                        bench_series.append({"date": r["timestamp"].strftime("%Y-%m-%d"), "bench_pct": round(((float(r["close"]) / base) - 1.0)*100.0, 2)})
 
-            # Merge portfolio and BTC
-            btc_map = {r["date"]: r["btc_pct"] for r in btc_series}
+            # Merge portfolio and benchmark
+            bench_map = {r["date"]: r["bench_pct"] for r in bench_series}
             merged = []
             for row in portfolio_series:
                 d = row["date"]
-                merged.append({"date": d, "portfolio_pct": row["portfolio_pct"], "btc_pct": btc_map.get(d)})
+                merged.append({"date": d, "portfolio_pct": row["portfolio_pct"], "benchmark_pct": bench_map.get(d)})
             self.portfolio_vs_btc = merged
+
+            # Current portfolio point for efficient frontier overlay
+            try:
+                if len(nav_values) > 2:
+                    import numpy as _np
+                    rets = _np.diff(_np.array(nav_values)) / _np.array(nav_values[:-1])
+                    vol = float(_np.std(rets, ddof=1))
+                    total_ret = float(nav_values[-1] - 1.0)
+                    # Store as a single-point frontier overlay by appending marker in efficient_frontier_data_meta
+                    self.current_portfolio_point = {"risk": vol, "return": total_ret}
+                else:
+                    self.current_portfolio_point = {"risk": 0.0, "return": 0.0}
+            except Exception:
+                self.current_portfolio_point = {"risk": 0.0, "return": 0.0}
 
         except Exception as e:
             print(f"Error fetching portfolio data: {e}")
@@ -222,11 +426,12 @@ class PortfolioState(rx.State):
     suggested_allocation: List[Dict] = []
     optimization_comparison: List[Dict] = []
     efficient_frontier_data: List[Dict] = []
+    current_portfolio_point: Dict = {}
 
     # Optimization configuration
     risk_free_rate: float = 0.05
     risk_aversion: float = 2.0
-    lookback_days: int = 252
+    lookback_days: int = 365
     min_weight: float = 0.01
     max_weight: float = 0.40
 
@@ -389,7 +594,7 @@ class PortfolioState(rx.State):
         elif param == "risk_aversion":
             self.risk_aversion = _to_float(value, 2.0)
         elif param == "lookback_days":
-            self.lookback_days = int(_to_float(value, 252))
+            self.lookback_days = int(_to_float(value, 365))
         elif param == "min_weight":
             self.min_weight = _to_float(value, 0.01)
         elif param == "max_weight":

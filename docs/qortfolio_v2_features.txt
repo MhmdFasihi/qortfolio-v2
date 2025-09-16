@@ -809,8 +809,8 @@ class RiskfolioAnalyzer:
             'cvar_99_hist': port.cvar_hist(alpha=0.01).iloc[0],
             
             # Portfolio risk measures
-            'portfolio_volatility': np.sqrt(weights.T @ port.cov @ weights) * np.sqrt(252),
-            'portfolio_returns': port.mu @ weights * 252,
+            'portfolio_volatility': np.sqrt(weights.T @ port.cov @ weights) * np.sqrt(365),
+            'portfolio_returns': port.mu @ weights * 365,
             
             # Drawdown measures
             'max_drawdown': port.max_drawdown(returns).iloc[0],
@@ -818,7 +818,7 @@ class RiskfolioAnalyzer:
             'drawdown_duration': port.drawdown_duration(returns).iloc[0],
             
             # Risk-adjusted returns
-            'sharpe_ratio': (port.mu @ weights * 252) / (np.sqrt(weights.T @ port.cov @ weights) * np.sqrt(252)),
+            'sharpe_ratio': (port.mu @ weights * 365) / (np.sqrt(weights.T @ port.cov @ weights) * np.sqrt(365)),
             'sortino_ratio': port.sortino_ratio(returns).iloc[0],
             'calmar_ratio': port.calmar_ratio(returns).iloc[0],
             
@@ -902,9 +902,9 @@ class RiskfolioAnalyzer:
         hrp_returns = returns_data @ w_hrp
         hrp_metrics = {
             'weights': w_hrp.to_dict(),
-            'expected_return': (returns_data.mean() @ w_hrp) * 252,
-            'volatility': np.sqrt(w_hrp.T @ port.cov @ w_hrp) * np.sqrt(252),
-            'sharpe_ratio': ((returns_data.mean() @ w_hrp) * 252) / (np.sqrt(w_hrp.T @ port.cov @ w_hrp) * np.sqrt(252)),
+            'expected_return': (returns_data.mean() @ w_hrp) * 365,
+            'volatility': np.sqrt(w_hrp.T @ port.cov @ w_hrp) * np.sqrt(365),
+            'sharpe_ratio': ((returns_data.mean() @ w_hrp) * 365) / (np.sqrt(w_hrp.T @ port.cov @ w_hrp) * np.sqrt(365)),
             'max_drawdown': qs.stats.max_drawdown(hrp_returns),
             'var_95': np.percentile(hrp_returns, 5),
             'cvar_95': hrp_returns[hrp_returns <= np.percentile(hrp_returns, 5)].mean()

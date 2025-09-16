@@ -1133,8 +1133,8 @@ class TimeUtils:
                 if holidays is None or current_date not in holidays:
                     business_days += 1
         
-        # Convert to years (approximately 252 business days per year)
-        return business_days / 252.0
+        # Convert to years (approximately 365 business days per year)
+        return business_days / 365.0
     
     @staticmethod
     def get_next_expiry_date(current_date: datetime,

@@ -57,7 +57,7 @@ class MathUtils:
         """
         vol = np.std(returns)
         if annualize:
-            vol *= np.sqrt(252)  # Trading days per year
+            vol *= np.sqrt(365)  # Trading days per year
         return vol
     
     @staticmethod

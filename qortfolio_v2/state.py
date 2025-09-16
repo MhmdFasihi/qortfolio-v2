@@ -828,7 +828,7 @@ class RiskState(rx.State):
 
             # Generate sector attribution
             sector_attribution = await performance_analyzer.generate_performance_attribution(
-                self.selected_portfolio, "sector", 252
+                self.selected_portfolio, "sector", 365
             )
 
             # Update state with attribution data (simplified for demo)
@@ -975,8 +975,8 @@ class RiskState(rx.State):
             analyzer = QuantStatsAnalyzer(db)
 
             # Get returns series (use internal methods for consistency)
-            port_returns = await analyzer._get_portfolio_returns(self.selected_portfolio, 252)
-            bench_returns = await analyzer._get_benchmark_returns(self.selected_benchmark, 252)
+            port_returns = await analyzer._get_portfolio_returns(self.selected_portfolio, 365)
+            bench_returns = await analyzer._get_benchmark_returns(self.selected_benchmark, 365)
 
             if port_returns is None or len(port_returns) == 0:
                 self.performance_comparison_data = []

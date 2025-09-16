@@ -408,7 +408,7 @@ class StressTesting:
 
     @staticmethod
     def generate_historical_scenarios(returns_data: pd.DataFrame,
-                                    lookback_days: int = 252) -> List[np.ndarray]:
+                                    lookback_days: int = 365) -> List[np.ndarray]:
         """Generate scenarios based on historical worst periods"""
         scenarios = []
 
@@ -482,7 +482,7 @@ if __name__ == "__main__":
     async def main():
         # Generate sample data
         np.random.seed(42)
-        dates = pd.date_range(start='2023-01-01', periods=252, freq='D')
+        dates = pd.date_range(start='2023-01-01', periods=365, freq='D')
         assets = ['BTC', 'ETH', 'SOL', 'AVAX']
 
         # Simulate correlated returns
@@ -493,7 +493,7 @@ if __name__ == "__main__":
                  [0.03, 0.035, 0.028, 0.022],
                  [0.025, 0.028, 0.045, 0.025],
                  [0.02, 0.022, 0.025, 0.05]],
-                252
+                365
             ),
             index=dates,
             columns=assets

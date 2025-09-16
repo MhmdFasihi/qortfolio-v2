@@ -188,7 +188,7 @@ class CorrelationAnalyzer:
         }
 
     def detect_correlation_regimes(self,
-                                 window_size: int = 252,
+                                 window_size: int = 365,
                                  n_regimes: int = 3) -> Dict[str, any]:
         """
         Detect correlation regime changes over time
@@ -375,7 +375,7 @@ class CorrelationAnalyzer:
     def calculate_rolling_correlations(self,
                                      asset1: str,
                                      asset2: str,
-                                     window: int = 252) -> pd.Series:
+                                     window: int = 365) -> pd.Series:
         """
         Calculate rolling correlation between two assets
 
@@ -516,7 +516,7 @@ if __name__ == "__main__":
     np.random.seed(42)
 
     # Generate sample data
-    dates = pd.date_range(start='2023-01-01', periods=252, freq='D')
+    dates = pd.date_range(start='2023-01-01', periods=365, freq='D')
     assets = ['BTC', 'ETH', 'SOL', 'AVAX']
 
     # Create correlated returns
@@ -526,7 +526,7 @@ if __name__ == "__main__":
                          [0.3, 0.4, 0.5, 1.0]])
 
     returns_data = pd.DataFrame(
-        np.random.multivariate_normal(np.zeros(4), true_corr * 0.04, 252),
+        np.random.multivariate_normal(np.zeros(4), true_corr * 0.04, 365),
         index=dates,
         columns=assets
     )

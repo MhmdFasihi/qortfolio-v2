@@ -47,7 +47,7 @@ class PortfolioOptimizationService:
                                     method: str,
                                     risk_free_rate: float = 0.05,
                                     risk_aversion: float = 2.0,
-                                    lookback_days: int = 252,
+                                    lookback_days: int = 365,
                                     min_weight: float = 0.01,
                                     max_weight: float = 0.40,
                                     sector_constraints: Optional[Dict] = None,
@@ -124,7 +124,7 @@ class PortfolioOptimizationService:
                                         assets: List[str],
                                         methods: List[str] = None,
                                         risk_free_rate: float = 0.05,
-                                        lookback_days: int = 252,
+                                        lookback_days: int = 365,
                                         sector_constraints: Optional[Dict] = None,
                                         asset_constraints: Optional[Dict] = None) -> List[Dict]:
         """
@@ -234,7 +234,7 @@ class PortfolioOptimizationService:
         try:
             await self.initialize()
 
-            config = OptimizationConfig(lookback_days=252)
+            config = OptimizationConfig(lookback_days=365)
             returns_data = await self.optimization_model.prepare_market_data(
                 portfolio_id, assets, config.lookback_days
             )

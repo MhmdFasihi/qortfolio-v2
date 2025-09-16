@@ -24,7 +24,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 # Test data setup
 SAMPLE_PORTFOLIO_ASSETS = ['BTC-USD', 'ETH-USD', 'SOL-USD', 'AVAX-USD', 'LINK-USD', 'AAVE-USD']
 
-def generate_sample_returns_data(assets: List[str], n_days: int = 252) -> pd.DataFrame:
+def generate_sample_returns_data(assets: List[str], n_days: int = 365) -> pd.DataFrame:
     """Generate realistic crypto returns data for testing"""
     np.random.seed(42)
 
@@ -74,7 +74,7 @@ class TestAdvancedPortfolioOptimization:
     def setup_method(self):
         """Setup test data for each test method"""
         self.assets = SAMPLE_PORTFOLIO_ASSETS
-        self.returns_data = generate_sample_returns_data(self.assets, 252)
+        self.returns_data = generate_sample_returns_data(self.assets, 365)
         print("✅ Test setup completed with sample returns data")
 
     def test_optimization_imports(self):
@@ -109,7 +109,7 @@ class TestAdvancedPortfolioOptimization:
             config = OptimizationConfig()
             assert config.method == OptimizationMethod.HRP
             assert config.risk_free_rate == 0.05
-            assert config.lookback_days == 252
+            assert config.lookback_days == 365
 
             # Test custom configuration
             custom_config = OptimizationConfig(
@@ -348,8 +348,8 @@ class TestAdvancedPortfolioOptimization:
                 assert all(weights >= 0)
 
                 # Calculate performance metrics
-                portfolio_return = (portfolio.mu @ weights).iloc[0] * 252
-                portfolio_vol = np.sqrt(weights.T @ portfolio.cov @ weights).iloc[0] * np.sqrt(252)
+                portfolio_return = (portfolio.mu @ weights).iloc[0] * 365
+                portfolio_vol = np.sqrt(weights.T @ portfolio.cov @ weights).iloc[0] * np.sqrt(365)
                 sharpe_ratio = (portfolio_return - 0.05) / portfolio_vol
 
                 # Validate reasonable performance
@@ -430,8 +430,8 @@ class TestAdvancedPortfolioOptimization:
             )
 
             # Calculate performance metrics
-            portfolio_return = (self.returns_data.mean() @ equal_weights['weights']) * 252
-            portfolio_cov = np.sqrt(equal_weights['weights'].T @ self.returns_data.cov() @ equal_weights['weights']) * np.sqrt(252)
+            portfolio_return = (self.returns_data.mean() @ equal_weights['weights']) * 365
+            portfolio_cov = np.sqrt(equal_weights['weights'].T @ self.returns_data.cov() @ equal_weights['weights']) * np.sqrt(365)
             sharpe_ratio = (portfolio_return - 0.05) / portfolio_cov
 
             # Validate metrics
