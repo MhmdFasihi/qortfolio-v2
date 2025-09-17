@@ -26,5 +26,9 @@
     "AI": {
         "tickers": ["NEAR", "FET", "RLC", "0X0", "RENDER", "TAO", "GRT", "ARKM", "TRAC", "IO", "PAAL", "RSS3", "AGI", "ABT", "ATH", "AI", "NMR", "ORAI", "GPU", "WLD", "GLM", "VIRTUAL", "GRASS"],
         "yfinance": ["NEAR", "FET", "RLC", "0X0", "RENDER", "TAO22974", "GRT6719", "ARKM", "TRAC", "IO29835", "PAAL", "RSS3", "AGI", "ABT", "ATH30083", "AI28846", "NMR", "ORAI", "GPU", "WLD", "GLM", "VIRTUAL", "GRASS32956"]
+    },
+    "Stablecoin": {
+        "tickers": ["USDT", "USDT-USD", "USDC", "USDC-USD", "DAI", "BUSD", "TUSD", "USDP", "FRAX", "LUSD", "sUSD", "USDD"],
+        "yfinance": ["USDT-USD", "USDT", "USDC-USD", "USDC", "DAI", "BUSD", "TUSD", "USDP", "FRAX", "LUSD", "sUSD", "USDD"]
     }
 }

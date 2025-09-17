@@ -52,6 +52,10 @@ class YFinanceProvider:
             'BCH': CryptoAsset('BCH', 'BCH-USD', 'Bitcoin Cash'),
             'XRP': CryptoAsset('XRP', 'XRP-USD', 'XRP'),
             'DOGE': CryptoAsset('DOGE', 'DOGE-USD', 'Dogecoin'),
+            'USDT': CryptoAsset('USDT', 'USDT-USD', 'Tether USD'),
+            # Traditional assets
+            'GC': CryptoAsset('GC', 'GC=F', 'Gold Futures', 'commodity'),
+            'SPY': CryptoAsset('SPY', 'SPY', 'SPDR S&P 500 ETF', 'equity'),
         }
 
         # 24/7 crypto trading - 365 days per year (excluding leap year adjustments)
@@ -63,8 +67,19 @@ class YFinanceProvider:
 
     def _get_yahoo_symbol(self, symbol: str) -> str:
         """Get Yahoo Finance symbol for crypto asset"""
-        asset = self.crypto_assets.get(symbol.upper())
-        return asset.yahoo_symbol if asset else f"{symbol.upper()}-USD"
+        # Handle symbols that are already in yahoo format
+        if symbol in ['GC=F', 'SPY']:
+            return symbol
+
+        # Remove -USD suffix if present for lookup
+        clean_symbol = symbol.replace('-USD', '')
+        asset = self.crypto_assets.get(clean_symbol.upper())
+
+        if asset:
+            return asset.yahoo_symbol
+        else:
+            # For unknown symbols, return as-is if already formatted, otherwise add -USD
+            return symbol if ('-USD' in symbol or '=F' in symbol) else f"{symbol.upper()}-USD"
 
     def get_current_price(self, symbol: str) -> Optional[Dict]:
         """

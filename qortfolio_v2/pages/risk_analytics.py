@@ -58,7 +58,6 @@ def risk_analytics_page() -> rx.Component:
             rx.tabs.list(
                 rx.tabs.trigger("Risk Dashboard", value="dashboard"),
                 rx.tabs.trigger("Performance Analysis", value="performance"),
-                rx.tabs.trigger("Portfolio Optimization", value="optimization"),
                 rx.tabs.trigger("Sector Analysis", value="sectors"),
             ),
             rx.tabs.content(
@@ -70,11 +69,6 @@ def risk_analytics_page() -> rx.Component:
                 # Performance Analysis Tab
                 performance_analysis_content(),
                 value="performance"
-            ),
-            rx.tabs.content(
-                # Portfolio Optimization Tab
-                portfolio_optimization_content(),
-                value="optimization"
             ),
             rx.tabs.content(
                 # Sector Analysis Tab
@@ -236,100 +230,6 @@ def performance_analysis_content() -> rx.Component:
         width="100%",
     )
 
-
-def portfolio_optimization_content() -> rx.Component:
-    """Portfolio optimization tab content."""
-    return rx.vstack(
-        rx.grid(
-            rx.card(
-                rx.vstack(
-                    rx.hstack(
-                        rx.heading("Current Allocation", size="5"),
-                        rx.spacer(),
-                        rx.button(
-                            "Optimize",
-                            on_click=RiskState.optimize_portfolio,
-                            loading=RiskState.optimization_loading,
-                            size="2",
-                            color_scheme="purple",
-                        ),
-                        width="100%",
-                    ),
-                    rx.cond(
-                        RiskState.current_allocation_data,
-                        rx.recharts.pie_chart(
-                            rx.recharts.pie(
-                                data_key="weight",
-                                name_key="asset",
-                                cx="50%",
-                                cy="50%",
-                                outer_radius=100,
-                                fill="#a855f7"
-                            ),
-                            rx.recharts.tooltip(),
-                            data=RiskState.current_allocation_data,
-                            height=300,
-                        ),
-                        rx.text("No allocation data", color="#9ca3af"),
-                    ),
-                ),
-                style={"background": "rgba(45, 27, 61, 0.8)", "border": "1px solid #4c1d95"},
-            ),
-            rx.card(
-                rx.vstack(
-                    rx.heading("Suggested Allocation", size="5"),
-                    rx.cond(
-                        RiskState.suggested_allocation_data,
-                        rx.recharts.pie_chart(
-                            rx.recharts.pie(
-                                data_key="weight",
-                                name_key="asset",
-                                cx="50%",
-                                cy="50%",
-                                outer_radius=100,
-                                fill="#22c55e"
-                            ),
-                            rx.recharts.tooltip(),
-                            data=RiskState.suggested_allocation_data,
-                            height=300,
-                        ),
-                        rx.text("Run optimization to see suggestions", color="#9ca3af"),
-                    ),
-                ),
-                style={"background": "rgba(45, 27, 61, 0.8)", "border": "1px solid #4c1d95"},
-            ),
-            columns="2",
-            spacing="4",
-            width="100%",
-        ),
-
-        rx.card(
-            rx.vstack(
-                rx.heading("Efficient Frontier", size="5"),
-                rx.cond(
-                    RiskState.efficient_frontier_data,
-                    rx.recharts.scatter_chart(
-                        rx.recharts.scatter(
-                            data_key="return",
-                            name="return",
-                            fill="#a855f7"
-                        ),
-                        rx.recharts.x_axis(data_key="risk", name="Risk"),
-                        rx.recharts.y_axis(data_key="return", name="Return"),
-                        rx.recharts.cartesian_grid(stroke_dasharray="3 3"),
-                        rx.recharts.tooltip(),
-                        data=RiskState.efficient_frontier_data,
-                        height=400,
-                    ),
-                    rx.text("Run optimization to see efficient frontier", color="#9ca3af"),
-                ),
-            ),
-            style={"background": "rgba(45, 27, 61, 0.8)", "border": "1px solid #4c1d95"},
-            width="100%",
-        ),
-        spacing="4",
-        width="100%",
-    )
 
 
 def sector_analysis_content() -> rx.Component:

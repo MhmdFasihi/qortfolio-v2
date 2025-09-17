@@ -37,7 +37,7 @@ class PortfolioOptimizationService:
 
     async def initialize(self):
         """Initialize service with database connection"""
-        if not self.db:
+        if self.db is None:
             self.db = await get_database_async()
             self.optimization_model = PortfolioOptimizationModel(self.db)
 

@@ -65,7 +65,7 @@ CRYPTO_SECTORS = {
         "market_cap_tier": "mixed"
     },
     "Stablecoin": {
-        "tickers": ["USDT", "USDC", "DAI", "BUSD", "TUSD", "FRAX"],
+        "tickers": ["USDT", "USDT-USD", "USDC", "USDC-USD", "DAI", "BUSD", "TUSD", "FRAX"],
         "description": "Stablecoins pegged to fiat currencies",
         "market_cap_tier": "large"
     }

@@ -14,6 +14,7 @@ class OptionsState(rx.State):
     selected_currency: str = "BTC"
     loading: bool = False
     db_status: str = "Checking..."
+    sidebar_visible: bool = True  # Sidebar visibility toggle
 
     # Data
     options_data: List[Dict] = []
@@ -220,6 +221,10 @@ class OptionsState(rx.State):
             return OptionsState.start_auto_refresh()
         else:
             return OptionsState.stop_auto_refresh()
+
+    def toggle_sidebar(self):
+        """Toggle sidebar visibility"""
+        self.sidebar_visible = not self.sidebar_visible
 
     async def start_auto_refresh(self):
         """Start periodic refresh loop."""
